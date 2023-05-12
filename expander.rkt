@@ -11,13 +11,17 @@
 
 (define-syntax-rule (statement s) s)
 
-(define internal-namespace (make-base-empty-namespace))
+(define internal-namespace (module->namespace 'slideshow (namespace-anchor->empty-namespace anchor)))
 (define/contract internal-table (hash/c (or/c symbol? exact-nonnegative-integer?) pict?) (make-hasheq))
 (define/contract internal-sequence (box/c (listof pict?)) (box null))
 (define/contract internal-bookmark-table (hash/c symbol? pict?) (make-hasheq))
 (define/contract internal-counter (box/c exact-nonnegative-integer?) (box 0))
 
-(namespace-attach-module (namespace-anchor->empty-namespace anchor) 'slideshow internal-namespace)
+(module* test #f
+  (require rackunit)
+  (test-case
+      "namespace"
+    (check-true (pict? (eval #'(titlet "Hello, World!") internal-namespace)))))
 
 (define-syntax (definition stx)
   (syntax-case stx ()
