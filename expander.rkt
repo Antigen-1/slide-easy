@@ -51,7 +51,7 @@
          (set-box! internal-counter (+ (unbox internal-counter) num)))))
 (define (mark sym)
   (hash-set! internal-bookmark-table sym (unbox internal-counter)))
-(define/contract (yield) (-> slide?)
+(define (yield)
   (apply slide (unbox internal-sequence)))
 
 (define-syntax (operation stx)
