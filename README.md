@@ -1,3 +1,3 @@
 slide-easy
 ==========
-README text here.
+过程式的幻灯片
