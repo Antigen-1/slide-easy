@@ -7,15 +7,10 @@
 
 (define-syntax-rule (statement s) s)
 
-;;assemble all bindings I need into this module
-(module config slideshow
-  (provide (contract-out (current-slide-constructor (parameter/c (-> pict? ... any/c)))) (all-from-out slideshow))
-  (define current-slide-constructor (make-parameter slide)))
-
-(require 'config)
+(require "config.rkt")
 
 (define-namespace-anchor anchor)
-(define internal-namespace (module->namespace ''config (namespace-anchor->empty-namespace anchor)))
+(define internal-namespace (module->namespace "config.rkt" (namespace-anchor->empty-namespace anchor)))
 
 (define/contract internal-table (hash/c (or/c symbol? exact-nonnegative-integer?) pict?) (make-hasheq))
 (define/contract internal-sequence (box/c (listof pict?)) (box null))
@@ -119,4 +114,4 @@
      #'(yield))))
 (define-syntax-rule (operand id) 'id)
 
-(provide program statement newline operand operation definition racket (all-from-out racket/base))
+(provide program statement newline operand operation definition racket (all-from-out "config.rkt"))
