@@ -1,6 +1,7 @@
 #lang brag
 program : [newline] (statement newline)* [statement]
-statement : definition | operation
+statement : definition | operation | racket
+racket : SEXP
 newline : NL+
 definition : ID SEXP
 operation : operator (operand)*

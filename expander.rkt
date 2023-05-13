@@ -1,8 +1,4 @@
-#lang slideshow
-(require racket/contract racket/list)
-
-(define-namespace-anchor anchor)
-
+#lang racket/base
 (define-syntax-rule (program form ...)
   (begin form ...))
 
@@ -11,7 +7,16 @@
 
 (define-syntax-rule (statement s) s)
 
-(define internal-namespace (module->namespace 'slideshow (namespace-anchor->empty-namespace anchor)))
+;;assemble all bindings I need into this module
+(module config slideshow
+  (provide (contract-out (current-slide-constructor (parameter/c (-> pict? ... any/c)))) (all-from-out slideshow))
+  (define current-slide-constructor (make-parameter slide)))
+
+(require 'config)
+
+(define-namespace-anchor anchor)
+(define internal-namespace (module->namespace ''config (namespace-anchor->empty-namespace anchor)))
+
 (define/contract internal-table (hash/c (or/c symbol? exact-nonnegative-integer?) pict?) (make-hasheq))
 (define/contract internal-sequence (box/c (listof pict?)) (box null))
 (define/contract internal-bookmark-table (hash/c symbol? exact-nonnegative-integer?) (make-hasheq))
@@ -22,6 +27,16 @@
   (test-case
       "namespace"
     (check-true (pict? (eval #'(titlet "Hello, World!") internal-namespace)))))
+
+(define-syntax (racket stx)
+  (syntax-case stx ()
+    ((_ str)
+     (with-syntax ((sexp (datum->syntax stx (list 'syntax (let ((p (open-input-string (syntax->datum #'str))))
+                                                            (let loop ((r null))
+                                                              (define v (read p))
+                                                              (cond ((eof-object? v) (cons 'begin (reverse r)))
+                                                                    (else (loop (cons v r))))))))))
+       #'(eval sexp internal-namespace)))))
 
 (define-syntax (definition stx)
   (syntax-case stx ()
@@ -62,7 +77,7 @@
 (define (mark sym)
   (hash-set! internal-bookmark-table sym (unbox internal-counter)))
 (define (yield)
-  (apply slide (take (unbox internal-sequence) (unbox internal-counter))))
+  (apply (current-slide-constructor) (take (unbox internal-sequence) (unbox internal-counter))))
 
 (module+ test
   (test-case
@@ -104,4 +119,4 @@
      #'(yield))))
 (define-syntax-rule (operand id) 'id)
 
-(provide program statement newline operand operation definition (all-from-out slideshow))
+(provide program statement newline operand operation definition racket (all-from-out racket/base))
