@@ -12,7 +12,7 @@
 (define-namespace-anchor anchor)
 (define internal-namespace (module->namespace "config.rkt" (namespace-anchor->empty-namespace anchor)))
 
-(define/contract internal-table (hash/c (or/c symbol? exact-nonnegative-integer?) pict?) (make-hasheq))
+(define/contract internal-table (hash/c (or/c symbol? exact-nonnegative-integer?) (or/c pict? comment?)) (make-hasheq))
 (define/contract internal-sequence (box/c (listof pict?)) (box null))
 (define/contract internal-bookmark-table (hash/c symbol? exact-nonnegative-integer?) (make-hasheq))
 (define/contract internal-counter (box/c exact-nonnegative-integer?) (box 0))
