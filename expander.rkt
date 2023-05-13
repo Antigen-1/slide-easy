@@ -14,10 +14,10 @@
 (define internal-namespace (module->namespace 'slideshow (namespace-anchor->empty-namespace anchor)))
 (define/contract internal-table (hash/c (or/c symbol? exact-nonnegative-integer?) pict?) (make-hasheq))
 (define/contract internal-sequence (box/c (listof pict?)) (box null))
-(define/contract internal-bookmark-table (hash/c symbol? pict?) (make-hasheq))
+(define/contract internal-bookmark-table (hash/c symbol? exact-nonnegative-integer?) (make-hasheq))
 (define/contract internal-counter (box/c exact-nonnegative-integer?) (box 0))
 
-(module* test #f
+(module+ test
   (require rackunit)
   (test-case
       "namespace"
@@ -34,25 +34,61 @@
                    (id (datum->syntax stx (list 'quote #'id))))
        #'(hash-set! internal-table id (eval sexp internal-namespace))))))
 
+;;the functions used to handling statements
 (define (init) (set-box! internal-sequence null) (set-box! internal-counter 0))
 (define/contract (jump location) (-> (or/c symbol? exact-nonnegative-integer?) any/c)
   (set-box! internal-counter (let/cc ret (hash-ref internal-bookmark-table (if (symbol? location) location (ret location))))))
 (define (send . refs)
-  (define num (length refs))
   (define seq (unbox internal-sequence))
+  
   (define (reference ref) (hash-ref internal-table ref))
-  (cond ((null? seq) (set-box! internal-sequence (map reference refs)) (set-box! internal-counter num))
+  
+  (define-values (num subseq) (for/fold ((n 0) (s null))
+                                        ((ref (in-list refs)))
+                                (values (add1 n) (cons (reference ref) s))))
+  (define rsubseq (reverse subseq))
+  (cond ((null? seq) (set-box! internal-sequence rsubseq) (set-box! internal-counter num))
         (else
+         (define pos (unbox internal-counter))
          (define-values (former latter)
-           (split-at seq (unbox internal-counter)))
-         (define-values (_ latter2)
-           (if (> num (length latter)) (values null null) (split-at latter num)))
-         (set-box! internal-sequence (append former (map reference refs) latter2))
-         (set-box! internal-counter (+ (unbox internal-counter) num)))))
+           (split-at seq pos))
+         
+         (define (takel lst num)
+           (cond ((or (null? lst) (zero? num)) lst)
+                 (else (takel (cdr lst) (sub1 num)))))
+
+         (set-box! internal-sequence (append former rsubseq (takel latter num)))
+         (set-box! internal-counter (+ pos num)))))
 (define (mark sym)
   (hash-set! internal-bookmark-table sym (unbox internal-counter)))
 (define (yield)
-  (apply slide (unbox internal-sequence)))
+  (apply slide (take (unbox internal-sequence) (unbox internal-counter))))
+
+(module+ test
+  (test-case
+      "stack"
+    (hash-set! internal-table 'a (t "a"))
+    (hash-set! internal-table 'b (t "b"))
+    (hash-set! internal-table 12 (t "12"))
+    (define test-lst1 (append (make-list 10000 'a) (make-list 10000 'b)))
+    (define test-lst2 (make-list 20000 12))
+
+    (displayln "`send` the testing lists")
+    (time (apply send test-lst1))
+    (jump 1000)
+    (mark 'section1)
+    (check-eq? (unbox internal-counter) 1000)
+    (check-eq? (hash-ref internal-bookmark-table 'section1) 1000)
+
+    (time (apply send test-lst2))
+    (check-eq? (unbox internal-counter) 21000)
+    
+    (jump 'section1)
+    (check-eq? (unbox internal-counter) 1000)
+
+    (init)
+    (check-eq? (unbox internal-sequence) null)
+    (check-eq? (unbox internal-counter) 0)))
 
 (define-syntax (operation stx)
   (syntax-case stx (operator)
