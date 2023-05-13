@@ -15,7 +15,8 @@
 (define/contract internal-table (hash/c (or/c symbol? exact-nonnegative-integer?) (or/c pict? comment?)) (make-hasheq))
 (define/contract internal-sequence (box/c (listof pict?)) (box null))
 (define/contract internal-bookmark-table (hash/c symbol? exact-nonnegative-integer?) (make-hasheq))
-(define/contract internal-counter (box/c exact-nonnegative-integer?) (box 0))
+(define/contract internal-counter (box/c (curry >= (unbox internal-max-size))) (box 0))
+(define/contract internal-max-size (box/c exact-nonnegative-integer?) (box 0))
 
 (module+ test
   (require rackunit)
@@ -45,7 +46,7 @@
        #'(hash-set! internal-table id (eval sexp internal-namespace))))))
 
 ;;the functions used to handling statements
-(define (init) (set-box! internal-sequence null) (set-box! internal-counter 0))
+(define (init) (set-box! internal-sequence null) (set-box! internal-max-size 0) (set-box! internal-counter 0))
 (define/contract (jump location) (-> (or/c symbol? exact-nonnegative-integer?) any/c)
   (set-box! internal-counter (let/cc ret (hash-ref internal-bookmark-table (if (symbol? location) location (ret location))))))
 (define (send . refs)
@@ -57,17 +58,15 @@
                                         ((ref (in-list refs)))
                                 (values (add1 n) (cons (reference ref) s))))
   (define rsubseq (reverse subseq))
-  (cond ((null? seq) (set-box! internal-sequence rsubseq) (set-box! internal-counter num))
+  (cond ((null? seq) (set-box! internal-sequence rsubseq) (set-box! internal-max-size num) (set-box! internal-counter num))
         (else
          (define pos (unbox internal-counter))
          (define-values (former latter)
            (split-at seq pos))
-         
-         (define (takel lst num)
-           (cond ((or (null? lst) (zero? num)) lst)
-                 (else (takel (cdr lst) (sub1 num)))))
-
-         (set-box! internal-sequence (append former rsubseq (takel latter num)))
+         (cond ((>= num (- (unbox internal-max-size) pos))
+                (set-box! internal-sequence (append former rsubseq))
+                (set-box! internal-max-size (+ pos num)))
+               (else (set-box! internal-sequence (append former rsubseq (drop latter num)))))
          (set-box! internal-counter (+ pos num)))))
 (define (mark sym)
   (hash-set! internal-bookmark-table sym (unbox internal-counter)))
@@ -96,6 +95,8 @@
     (jump 'section1)
     (check-eq? (unbox internal-counter) 1000)
 
+    (check-exn exn:fail:contract? (lambda () (jump 30000)))
+    
     (init)
     (check-eq? (unbox internal-sequence) null)
     (check-eq? (unbox internal-counter) 0)))
