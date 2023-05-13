@@ -15,7 +15,11 @@
 (define/contract internal-table (hash/c (or/c symbol? exact-nonnegative-integer?) (or/c pict? comment?)) (make-hasheq))
 (define/contract internal-sequence (box/c (listof pict?)) (box null))
 (define/contract internal-bookmark-table (hash/c symbol? exact-nonnegative-integer?) (make-hasheq))
-(define/contract internal-counter (box/c (curry >= (unbox internal-max-size))) (box 0))
+
+(define (not-overflow? n)
+  (>= (unbox internal-max-size) n))
+
+(define/contract internal-counter (box/c not-overflow?) (box 0))
 (define/contract internal-max-size (box/c exact-nonnegative-integer?) (box 0))
 
 (module+ test
@@ -58,16 +62,14 @@
                                         ((ref (in-list refs)))
                                 (values (add1 n) (cons (reference ref) s))))
   (define rsubseq (reverse subseq))
-  (cond ((null? seq) (set-box! internal-sequence rsubseq) (set-box! internal-max-size num) (set-box! internal-counter num))
-        (else
-         (define pos (unbox internal-counter))
-         (define-values (former latter)
-           (split-at seq pos))
-         (cond ((>= num (- (unbox internal-max-size) pos))
-                (set-box! internal-sequence (append former rsubseq))
-                (set-box! internal-max-size (+ pos num)))
-               (else (set-box! internal-sequence (append former rsubseq (drop latter num)))))
-         (set-box! internal-counter (+ pos num)))))
+  (define pos (unbox internal-counter))
+  (define-values (former latter)
+    (split-at seq pos))
+  (cond ((>= num (- (unbox internal-max-size) pos))
+         (set-box! internal-sequence (append former rsubseq))
+         (set-box! internal-max-size (+ pos num)))
+        (else (set-box! internal-sequence (append former rsubseq (drop latter num)))))
+  (set-box! internal-counter (+ pos num)))
 (define (mark sym)
   (hash-set! internal-bookmark-table sym (unbox internal-counter)))
 (define (yield)
