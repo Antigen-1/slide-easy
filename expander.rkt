@@ -7,10 +7,10 @@
 
 (define-syntax-rule (statement s) s)
 
-(require "config.rkt")
+(require slide-easy/config)
 
 (define-namespace-anchor anchor)
-(define internal-namespace (module->namespace "config.rkt" (namespace-anchor->empty-namespace anchor)))
+(define internal-namespace (module->namespace 'slide-easy/config (namespace-anchor->empty-namespace anchor)))
 
 (define/contract internal-table (hash/c (or/c symbol? exact-nonnegative-integer?) (or/c pict? comment?)) (make-hasheq))
 (define/contract internal-sequence (box/c (listof pict?)) (box null))
@@ -114,4 +114,4 @@
      #'(yield))))
 (define-syntax-rule (operand id) 'id)
 
-(provide program statement newline operand operation definition racket (all-from-out "config.rkt"))
+(provide program statement newline operand operation definition racket (all-from-out slide-easy/config))
