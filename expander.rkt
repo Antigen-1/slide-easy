@@ -117,4 +117,4 @@
      #'(yield))))
 (define-syntax-rule (operand id) 'id)
 
-(provide program statement newline operand operation definition racket (all-from-out slide-easy/config))
+(provide program statement newline operand operation definition racket (all-from-out racket/base))
