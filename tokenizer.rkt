@@ -6,7 +6,7 @@
    ((:or "init" "jump" "send" "mark" "yield")
     (token lexeme lexeme))
    (blank (token lexeme #:skip? #t))
-   ((:+ (char-set "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-:_+=/"))
+   ((:+ (:- any-char whitespace (char-set "(){}[]#;,\"'`")))
     (token 'ID (cond ((string->number lexeme))
                      (else (string->symbol lexeme)))))
    ((from/to "@{" "}@")

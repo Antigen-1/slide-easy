@@ -73,7 +73,7 @@
 (define (mark sym)
   (hash-set! internal-bookmark-table sym (unbox internal-counter)))
 (define (yield)
-  (apply (current-slide-constructor) (take (unbox internal-sequence) (unbox internal-counter))))
+  ((current-slide-constructor) ((current-pict-combinator) (take (unbox internal-sequence) (unbox internal-counter)))))
 
 (module+ test
   (test-case
