@@ -1,6 +1,6 @@
 #lang racket/base
 (require slide-easy/config racket/contract racket/list slideshow/base sugar/list (for-syntax racket/base))
-(provide program newline statement)
+(provide program newline statement (all-from-out racket/base))
 
 (define-namespace-anchor anchor)
 (define namespace (module->namespace 'slide-easy/config (namespace-anchor->empty-namespace anchor)))
