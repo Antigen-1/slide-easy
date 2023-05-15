@@ -41,9 +41,10 @@
 (define-syntax (slide-begin stx)
   (syntax-case stx ()
     ((_ status step0 step ...)
-     #'(slide-begin (step0 status) step ...))
-    ((_ _)
-     #'(void))))
+     #'(let ((result (step0 status)))
+         (slide-begin result step ...)))
+    ((_ status)
+     #'status)))
 
 (define-syntax-rule (program f ...)
   (slide-begin (status null (hasheq) (hasheq) 'new (current-init-pict)) f ...))
