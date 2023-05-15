@@ -11,10 +11,10 @@
       "namespace"
     (check-true (pict? (eval #'(text "Hello, World") namespace)))))
 
-(struct status (seq marks table mode))
-(struct/c status (listof (-> pict? ... pict?)) (hash/c symbol? exact-nonnegative-integer?) (hash/c symbol? (-> pict? ... pict?)) (or/c 'reslide 'new))
+(struct status (seq marks table mode last))
+(struct/c status (listof (-> (or/c pict? #f) pict?)) (hash/c symbol? exact-nonnegative-integer?) (hash/c symbol? (-> (or/c pict? #f) pict?)) (or/c 'reslide 'new) (or/c #f pict?))
 
-(define (reset s) (status null (hasheq) (hasheq) 'new))
+(define (reset s) (status null (hasheq) (hasheq) 'new (current-init-pict)))
 (define (set s sym form) (struct-copy status s (table (hash-set (status-table s) sym (eval form namespace)))))
 (define (mark s sym pos) (struct-copy status s (marks (hash-set (status-marks s) sym pos))))
 (define (exec s form) (eval form namespace) s)
@@ -29,13 +29,14 @@
 (define (yield s start end)
   (define st (get-position s start))
   (define ed (get-position s end))
+  (define lst (reverse (sublist (status-seq s) st ed)))
+  (define pic ((apply compose values lst) (status-last s)))
   (case (status-mode s)
     ((reslide) (define last (retract-most-recent-slide))
-               (re-slide last ((apply compose (reverse (sublist (status-seq s) st ed))) ((if (ghost-when-reslide?) ghost values) (slide->pict last))))
-               s)
-    ((new) (let/cc ret (slide ((apply compose (reverse (let ((r (sublist (status-seq s) st ed)))
-                                                         (if (null? r) (ret (slide)) r)))))))
-           (struct-copy status s (mode 'reslide)))))
+               (re-slide last pic)
+               (struct-copy status s (last pic)))
+    ((new) (slide pic)
+           (struct-copy status s (mode 'reslide) (last pic)))))
 
 (define-syntax (slide-begin stx)
   (syntax-case stx ()

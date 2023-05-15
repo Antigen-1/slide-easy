@@ -1,5 +1,6 @@
 #lang racket/base
 (require pict racket/contract)
-(provide (contract-out (ghost-when-reslide? (parameter/c boolean?)))
+(provide (contract-out (current-init-pict (parameter/c (or/c #f pict?))))
          (all-from-out pict racket/base))
-(define ghost-when-reslide? (make-parameter #t))
+
+(define current-init-pict (make-parameter #f))
