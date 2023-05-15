@@ -3,12 +3,12 @@
 
 (define lex
   (lexer-srcloc
-   ((:or "init" "jump" "send" "mark" "yield")
+   ((:or "reset" "exec" "set" "send" "mark" "yield")
     (token lexeme lexeme))
    (blank (token lexeme #:skip? #t))
-   ((:+ (:- any-char whitespace (char-set "(){}[]#;,\"'`")))
-    (token 'ID (cond ((string->number lexeme))
-                     (else (string->symbol lexeme)))))
+   ((:+ (:- any-char whitespace (char-set "|(){}[]#;,\"'`")))
+    (cond ((string->number lexeme) => (lambda (n) (token 'INT n)))
+          (else (token 'ID (string->symbol lexeme)))))
    ((from/to "@{" "}@")
     (token 'SEXP (trim-ends "@{" lexeme "}@")))
    ((:or "\n" "\r" "\r\n") (token 'NL))))
@@ -21,16 +21,20 @@
   (test-case
       "lexer"
     (check-equal? (apply-lex "12")
-                  (list (srcloc-token (token 'ID 12)
+                  (list (srcloc-token (token 'INT 12)
                                       (srcloc 'string 1 0 1 2))))
 
     (check-equal? (apply-lex "12:14")
                   (list (srcloc-token (token 'ID '12:14)
                                       (srcloc 'string 1 0 1 5))))
 
-    (check-equal? (apply-lex "init")
-                  (list (srcloc-token (token "init" "init")
-                                      (srcloc 'string 1 0 1 4))))
+    (check-equal? (apply-lex "reset")
+                  (list (srcloc-token (token "reset" "reset")
+                                      (srcloc 'string 1 0 1 5))))
+
+    (check-equal? (apply-lex "\n")
+                  (list (srcloc-token (token 'NL)
+                                      (srcloc 'string 1 0 1 1))))
 
     (check-equal? (apply-lex " ")
                   (list (srcloc-token (token " " #:skip? #t)

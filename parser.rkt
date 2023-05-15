@@ -1,9 +1,12 @@
 #lang brag
 program : [newline] (statement newline)* [statement]
-statement : definition | operation | racket
-racket : SEXP
+statement : set | mark | exec | send | yield | reset
+set : "set" ID SEXP
+mark : "mark" ID INT
+exec : "exec" SEXP
+send : "send" pos pos ID*
+yield : "yield" pos pos
+reset : "reset"
 newline : NL+
-definition : ID SEXP
-operation : operator (operand)*
-operator : "init" | "jump" | "send" | "mark" | "yield"
-operand : ID
+pos : INT | ID
+
