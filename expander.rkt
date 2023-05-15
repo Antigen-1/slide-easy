@@ -29,7 +29,7 @@
 (define (yield s start end)
   (define st (get-position s start))
   (define ed (get-position s end))
-  (define lst (reverse (sublist (status-seq s) st ed)))
+  (define lst ((if (left-to-right?) reverse values) (sublist (status-seq s) st ed)))
   (define pic ((apply compose values lst) (status-last s)))
   (case (status-mode s)
     ((reslide) (define last (retract-most-recent-slide))
@@ -46,7 +46,7 @@
      #'(void))))
 
 (define-syntax-rule (program f ...)
-  (slide-begin (status null (hasheq) (hasheq) 'new) f ...))
+  (slide-begin (status null (hasheq) (hasheq) 'new (current-init-pict)) f ...))
 
 (define-syntax-rule (newline _ ...) values)
 
