@@ -38,16 +38,10 @@
     ((new) (slide pic)
            (struct-copy status s (mode 'reslide) (last pic)))))
 
-(define-syntax (slide-begin stx)
-  (syntax-case stx ()
-    ((_ status step0 step ...)
-     #'(let ((result (step0 status)))
-         (slide-begin result step ...)))
-    ((_ status)
-     #'status)))
-
 (define-syntax-rule (program f ...)
-  (slide-begin (status null (hasheq) (hasheq) 'new (current-init-pict)) f ...))
+  (let loop ((init (status null (hasheq) (hasheq) 'new (current-init-pict))) (lst (list f ...)))
+    (cond ((null? lst) (void))
+          (else (loop ((car lst) init) (cdr lst))))))
 
 (define-syntax-rule (newline _ ...) values)
 
