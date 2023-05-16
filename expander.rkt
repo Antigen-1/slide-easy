@@ -1,5 +1,5 @@
 #lang racket/base
-(require slide-easy/config racket/contract racket/list slideshow/base sugar/list (for-syntax racket/base))
+(require slide-easy/config racket/contract racket/vector slideshow/base (for-syntax racket/base))
 (provide program newline statement pos
          reset set mark exec send yield 
          (all-from-out racket/base))
@@ -17,14 +17,14 @@
 ;;the core datatype and its contract
 (struct status (seq marks table) #:extra-constructor-name make-status)
 (struct/c status
-          (listof (-> pict? pict?))
+          (vectorof (-> pict? pict?))
           (hash/c symbol? exact-nonnegative-integer?)
           (hash/c symbol? (-> pict? pict?)))
 ;;------------------------------------------------------
 
 ;;------------------------------------------------------
 ;;functions
-(define (reset s) (make-status null (hasheq) (hasheq)))
+(define (reset s) (make-status #() (hasheq) (hasheq)))
 (define (set s sym form) (struct-copy status s (table (hash-set (status-table s) sym (eval form namespace)))))
 (define (mark s sym pos) (struct-copy status s (marks (hash-set (status-marks s) sym pos))))
 (define (exec s form) (eval form namespace) s)
@@ -32,14 +32,24 @@
 (define (get-position s p) (if (exact-nonnegative-integer? p) p (hash-ref (status-marks s) p)))
 
 (define (send s start end . refs)
-  (let-values (((former latter) (split-at (status-seq s) (get-position s end))))
-    (let ((_former (take former (get-position s start)))
-          (reference (lambda (ref) (hash-ref (status-table s) ref))))
-      (struct-copy status s (seq (append _former (map reference refs) latter))))))
+  (define st (get-position s start))
+  (define ed (get-position s end))
+
+  (define (reference ref) (hash-ref (status-table s) ref))
+  
+  (define new (list->vector (map reference refs)))
+  (define nlen (vector-length new))
+  (define seq (status-seq s))
+  (define len (vector-length seq))
+  (struct-copy status s (seq (let ((vec (make-vector (- (+ nlen len) (- ed st)))))
+                               (vector-copy! vec 0 seq 0 st)
+                               (vector-copy! vec st new)
+                               (vector-copy! vec (+ st nlen) seq ed)
+                               vec))))
 (define (yield s start end)
   (define st (get-position s start))
   (define ed (get-position s end))
-  (define lst ((if (left-to-right?) reverse values) (sublist (status-seq s) st ed)))
+  (define lst ((if (left-to-right?) reverse values) (vector->list (vector-copy (status-seq s) st ed))))
   (define pic ((apply compose values lst) (current-init-pict)))
   (slide pic)
   s)
@@ -48,7 +58,7 @@
 ;;------------------------------------------------------
 ;;macros
 (define-syntax-rule (program f ...)
-  (foldl (lambda (o i) (collect-garbage 'incremental) (o i)) (make-status null (hasheq) (hasheq)) (list f ...)))
+  (foldl (lambda (o i) (collect-garbage 'incremental) (o i)) (make-status #() (hasheq) (hasheq)) (list f ...)))
 
 (define-syntax-rule (newline _ ...) values)
 
@@ -74,12 +84,12 @@
 (module+ test
   (test-case
       "status"
-    (define init (make-status null (hasheq) (hasheq)))
+    (define init (make-status #() (hasheq) (hasheq)))
     
     (define result0 ((statement (set "set" test "(text \"hello world\")")) init))
     (define result1 ((statement (send "send" (pos 0) (pos 0) test)) result0))
     (check-eq? (hash-ref (status-table result1) 'test)
-               (car (status-seq result1)))
+               (vector-ref (status-seq result1) 0))
     
     (check-eq? ((statement (exec "exec" "(displayln \"exec : succeed\")")) init)
                init)
