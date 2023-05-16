@@ -1,6 +1,8 @@
 #lang racket/base
 (require slide-easy/config racket/contract racket/list slideshow/base sugar/list (for-syntax racket/base))
-(provide program newline statement (all-from-out racket/base))
+(provide program newline statement pos
+         reset set mark exec send yield 
+         (all-from-out racket/base))
 
 (define-namespace-anchor anchor)
 (define namespace (module->namespace 'slide-easy/config (namespace-anchor->empty-namespace anchor)))
@@ -11,10 +13,18 @@
       "namespace"
     (check-true (pict? (eval #'(text "Hello, World") namespace)))))
 
-(struct status (seq marks table mode last))
-(struct/c status (listof (-> (or/c pict? #f) pict?)) (hash/c symbol? exact-nonnegative-integer?) (hash/c symbol? (-> (or/c pict? #f) pict?)) (or/c 'reslide 'new) (or/c #f pict?))
+;;------------------------------------------------------
+;;the core datatype and its contract
+(struct status (seq marks table) #:extra-constructor-name make-status)
+(struct/c status
+          (listof (-> pict? pict?))
+          (hash/c symbol? exact-nonnegative-integer?)
+          (hash/c symbol? (-> pict? pict?)))
+;;------------------------------------------------------
 
-(define (reset s) (status null (hasheq) (hasheq) 'new (current-init-pict)))
+;;------------------------------------------------------
+;;functions
+(define (reset s) (make-status null (hasheq) (hasheq)))
 (define (set s sym form) (struct-copy status s (table (hash-set (status-table s) sym (eval form namespace)))))
 (define (mark s sym pos) (struct-copy status s (marks (hash-set (status-marks s) sym pos))))
 (define (exec s form) (eval form namespace) s)
@@ -30,18 +40,15 @@
   (define st (get-position s start))
   (define ed (get-position s end))
   (define lst ((if (left-to-right?) reverse values) (sublist (status-seq s) st ed)))
-  (define pic ((apply compose values lst) (status-last s)))
-  (case (status-mode s)
-    ((reslide) (define last (retract-most-recent-slide))
-               (re-slide last pic)
-               (struct-copy status s (last pic)))
-    ((new) (slide pic)
-           (struct-copy status s (mode 'reslide) (last pic)))))
+  (define pic ((apply compose values lst) (current-init-pict)))
+  (slide pic)
+  s)
+;;------------------------------------------------------
 
+;;------------------------------------------------------
+;;macros
 (define-syntax-rule (program f ...)
-  (let loop ((init (status null (hasheq) (hasheq) 'new (current-init-pict))) (lst (list f ...)))
-    (cond ((null? lst) (void))
-          (else (loop ((car lst) init) (cdr lst))))))
+  (foldl (lambda (o i) (collect-garbage 'incremental) (o i)) (make-status null (hasheq) (hasheq)) (list f ...)))
 
 (define-syntax-rule (newline _ ...) values)
 
@@ -49,19 +56,33 @@
   (define (read-all p)
     (let loop ((r null))
       (define v (read p))
-      (cond ((eof-object? v) (datum->syntax stx (list 'syntax (cons 'begin (reverse r))))) (else (loop (cons v r))))))
-  (syntax-case stx (set mark exec send yield reset pos)
-    ((_ (set _ id form))
-     (with-syntax ((sexp (read-all (open-input-string (syntax->datum #'form)))))
-       #'(lambda (s) (set s 'id sexp))))
-    ((_ (mark _ id pos))
-     #'(lambda (s) (mark s 'id pos)))
-    ((_ (exec _ form))
-     (with-syntax ((sexp (read-all (open-input-string (syntax->datum #'form)))))
-       #'(lambda (s) (exec s sexp))))
-    ((_ (send _ (pos start) (pos end) ref ...))
-     #'(lambda (s) (send s start end ref ...)))
-    ((_ (yield _ (pos start) (pos end)))
-     #'(lambda (s) (yield s start end)))
-    ((_ (reset _))
-     #'(lambda (s) (reset s)))))
+      (cond ((eof-object? v) (datum->syntax stx (list 'syntax (cons 'begin (reverse r)))))
+            (else (loop (cons v r))))))
+  (syntax-case stx ()
+    ((_ (operator _ operand ...))
+     (with-syntax (((operand ...)
+                    (map (lambda (o) (let ((c (syntax-e o)))
+                                       (cond ((list? c) o)
+                                             ((string? c) (read-all (open-input-string c)))
+                                             (else (datum->syntax stx (list 'quote o))))))
+                         (syntax->list #'(operand ...)))))
+       #'(lambda (s) (operator s operand ...))))))
+
+(define-syntax-rule (pos d) 'd)
+;;------------------------------------------------------
+
+(module+ test
+  (test-case
+      "status"
+    (define init (make-status null (hasheq) (hasheq)))
+    
+    (define result0 ((statement (set "set" test "(text \"hello world\")")) init))
+    (define result1 ((statement (send "send" (pos 0) (pos 0) test)) result0))
+    (check-eq? (hash-ref (status-table result1) 'test)
+               (car (status-seq result1)))
+    
+    (check-eq? ((statement (exec "exec" "(displayln \"exec : succeed\")")) init)
+               init)
+    
+    (define result2 ((statement (mark "mark" first 0)) init))
+    (check-eq? (hash-ref (status-marks result2) 'first) 0)))
