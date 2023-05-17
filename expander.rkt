@@ -1,5 +1,5 @@
 #lang racket/base
-(require slide-easy/config racket/contract racket/vector slideshow/base (for-syntax racket/base))
+(require slide-easy/config racket/contract racket/vector slideshow/base (for-syntax racket/base racket/syntax))
 (provide program line-separator statement pos mod
          reset set mark exec send yield
          (all-from-out racket/base))
@@ -24,7 +24,7 @@
 
 ;;------------------------------------------------------
 ;;functions
-(define (reset s) (make-status #() (hasheq) (hasheq)))
+(define (reset s) (make-status (vector) (hasheq) (hasheq)))
 (define (set s sym form) (struct-copy status s (table (hash-set (status-table s) sym (eval form namespace)))))
 (define (mark s sym pos) (struct-copy status s (marks (hash-set (status-marks s) sym pos))))
 (define (exec s form) (eval form namespace) s)
@@ -66,17 +66,19 @@
 
 (define-syntax (mod stx)
   (syntax-case stx ()
-    ((_ program)
+    ((_ _ program)
      #'program)
-    ((_ form program)
-     (with-syntax (((lib ...) (datum->syntax stx (read-all (open-input-string (syntax->datum #'form))))))
-       #'(begin (require lib ...)
-                (define-namespace-anchor new-anchor)
-                (namespace-attach-module (namespace-anchor->empty-namespace new-anchor) 'lib namespace) ...
-                program)))))
+    ((_ _ form _ program)
+     (let ((libs (read-all (open-input-string (syntax->datum #'form)))))
+       (with-syntax (((id ...) (datum->syntax stx (map (lambda (_) (generate-temporary 'lib)) libs)))
+                     ((lib ...) (datum->syntax stx libs)))
+         #'(begin (require racket/runtime-path)
+                  (define-runtime-module-path-index id 'lib) ...
+                  (parameterize ((current-namespace namespace)) (namespace-require (module-path-index-resolve id))) ...
+                  program))))))
 
 (define-syntax-rule (program f ...)
-  (foldl (lambda (o i) (collect-garbage 'incremental) (o i)) (make-status #() (hasheq) (hasheq)) (list f ...)))
+  (foldl (lambda (o i) (collect-garbage 'incremental) (o i)) (make-status (vector) (hasheq) (hasheq)) (list f ...)))
 
 (define-syntax-rule (line-separator _ ...) values)
 
@@ -97,12 +99,17 @@
 (module+ test
   (test-case
       "status"
-    (define init (make-status #() (hasheq) (hasheq)))
+    (define init (make-status (vector) (hasheq) (hasheq)))
+    (check-eq? init ((line-separator) init))
     
     (define result0 ((statement (set "set" test "(text \"hello world\")")) init))
     (define result1 ((statement (send "send" (pos 0) (pos 0) test)) result0))
     (check-eq? (hash-ref (status-table result1) 'test)
                (vector-ref (status-seq result1) 0))
+    (let ((result3 ((statement (reset "reset")) result1)))
+      (check-equal? (status-seq result3) (vector))
+      (check-equal? (status-marks result3) (hasheq))
+      (check-equal? (status-table result3) (hasheq)))
     
     (check-eq? ((statement (exec "exec" "(displayln \"exec : succeed\")")) init)
                init)

@@ -1,6 +1,6 @@
 #lang brag
-mod : [SEXP] program
-program : [line-separator] (statement line-separator)* [statement]
+mod : line-separator [SEXP line-separator] program
+program : (statement line-separator)* [statement]
 statement : set | mark | exec | send | yield | reset
 set : "set" ID SEXP
 mark : "mark" ID INT
