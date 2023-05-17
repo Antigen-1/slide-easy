@@ -6,7 +6,7 @@
    ((:or "reset" "exec" "set" "send" "mark" "yield")
     (token lexeme lexeme))
    (blank (token lexeme #:skip? #t))
-   ((:+ (:- any-char whitespace (char-set "|(){}[]#;,\"'`")))
+   ((:+ (:- any-char whitespace (char-set "|(){}[]#;,\"'`@.")))
     (cond ((string->number lexeme) => (lambda (n) (token 'INT n)))
           (else (token 'ID (string->symbol lexeme)))))
    ((from/to "@{" "}@")
