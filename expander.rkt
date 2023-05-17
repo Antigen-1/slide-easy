@@ -1,7 +1,7 @@
 #lang racket/base
 (require slide-easy/config racket/contract racket/vector slideshow/base (for-syntax racket/base))
-(provide program newline statement pos
-         reset set mark exec send yield 
+(provide program line-separator statement pos mod
+         reset set mark exec send yield
          (all-from-out racket/base))
 
 (define-namespace-anchor anchor)
@@ -57,23 +57,36 @@
 
 ;;------------------------------------------------------
 ;;macros
-(define-syntax-rule (program f ...)
-  (foldl (lambda (o i) (collect-garbage 'incremental) (o i)) (make-status #() (hasheq) (hasheq)) (list f ...)))
-
-(define-syntax-rule (newline _ ...) values)
-
-(define-syntax (statement stx)
+(begin-for-syntax
   (define (read-all p)
     (let loop ((r null))
       (define v (read p))
-      (cond ((eof-object? v) (datum->syntax stx (list 'syntax (cons 'begin (reverse r)))))
-            (else (loop (cons v r))))))
+      (cond ((eof-object? v) (reverse r))
+            (else (loop (cons v r)))))))
+
+(define-syntax (mod stx)
+  (syntax-case stx ()
+    ((_ program)
+     #'program)
+    ((_ form program)
+     (with-syntax (((lib ...) (datum->syntax stx (read-all (open-input-string (syntax->datum #'form))))))
+       #'(begin (require lib ...)
+                (define-namespace-anchor new-anchor)
+                (namespace-attach-module (namespace-anchor->empty-namespace new-anchor) 'lib namespace) ...
+                program)))))
+
+(define-syntax-rule (program f ...)
+  (foldl (lambda (o i) (collect-garbage 'incremental) (o i)) (make-status #() (hasheq) (hasheq)) (list f ...)))
+
+(define-syntax-rule (line-separator _ ...) values)
+
+(define-syntax (statement stx)
   (syntax-case stx ()
     ((_ (operator _ operand ...))
      (with-syntax (((operand ...)
                     (map (lambda (o) (let ((c (syntax-e o)))
                                        (cond ((list? c) o)
-                                             ((string? c) (read-all (open-input-string c)))
+                                             ((string? c) (datum->syntax stx (list 'syntax (cons 'begin (read-all (open-input-string c))))))
                                              (else (datum->syntax stx (list 'quote o))))))
                          (syntax->list #'(operand ...)))))
        #'(lambda (s) (operator s operand ...))))))
