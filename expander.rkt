@@ -20,7 +20,7 @@
           (vectorof (-> pict? pict?))
           (hash/c symbol? exact-nonnegative-integer?)
           (hash/c symbol? (-> pict? pict?))
-          (listof pict?))
+          (listof (list/c pict?)))
 ;;------------------------------------------------------
 
 ;;------------------------------------------------------
@@ -52,7 +52,7 @@
   (define ed (get-position s end))
   (define lst ((if (left-to-right?) reverse values) (vector->list (vector-copy (status-seq s) st ed))))
   (define pic ((apply compose values lst) (current-init-pict)))
-  (struct-copy status s (alts (cons pic (status-alts s)))))
+  (struct-copy status s (alts (cons (list pic) (status-alts s)))))
 (define (show s)
   (slide 'alts (reverse (status-alts s)))
   s)
@@ -111,7 +111,7 @@
 
     (check-eq? (hash-ref (status-table result2) 'test)
                (vector-ref (status-seq result2) 0))
-    (check-true (pict? (car (status-alts result2))))
+    (check-true (pict? (caar (status-alts result2))))
     (check-eq? null (status-alts ((statement (reset "reset")) result2)))
     
     (check-eq? ((statement (exec "exec" "(displayln \"exec : succeed\")")) init)
