@@ -78,7 +78,7 @@
                   program))))))
 
 (define-syntax-rule (program f ...)
-  (foldl (lambda (o i) (collect-garbage 'incremental) (o i)) (make-status (vector) (hasheq) (hasheq) null) (list f ...)))
+  (foldl (lambda (o i) (collect-garbage 'incremental) (o i)) (make-status (vector) (hasheq) (hasheq)) (list f ...)))
 
 (define-syntax-rule (line-separator _ ...) values)
 
