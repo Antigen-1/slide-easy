@@ -1,12 +1,13 @@
 #lang racket/base
 (require brag/support)
 
+(define-lex-abbrev keyword (:or "reset" "exec" "set" "send" "mark" "yield" "show"))
+
 (define lex
   (lexer-srcloc
-   ((:or "reset" "exec" "set" "send" "mark" "yield")
-    (token lexeme lexeme))
+   (keyword (token lexeme lexeme))
    (blank (token lexeme #:skip? #t))
-   ((:+ (:- any-char whitespace (char-set "@{}")))
+   ((:- (:+ (:- any-char whitespace (char-set "@{}"))) keyword)
     (cond ((string->number lexeme) => (lambda (n) (token 'INT n)))
           (else (token 'ID (string->symbol lexeme)))))
    ((from/to "@{" "}@")
@@ -20,6 +21,10 @@
 
   (test-case
       "lexer"
+    (check-equal? (apply-lex "@{(void)}@")
+                  (list (srcloc-token (token 'SEXP "(void)")
+                                      (srcloc 'string 1 0 1 10))))
+    
     (check-equal? (apply-lex "12")
                   (list (srcloc-token (token 'INT 12)
                                       (srcloc 'string 1 0 1 2))))
