@@ -90,9 +90,9 @@
     ((_ (operator _ operand ...))
      (with-syntax (((operand ...)
                     (map (lambda (o) (let ((c (syntax-e o)))
-                                       (cond ((list? c) o)
-                                             ((string? c) (datum->syntax stx (list 'syntax (cons 'begin (read-all (open-input-string c))))))
-                                             (else (datum->syntax stx (list 'quote o))))))
+                                       (cond ((list? c) o) ;;pos
+                                             ((string? c) (datum->syntax o (list 'syntax (cons 'begin (read-all (open-input-string c)))))) ;;SEXP
+                                             (else (datum->syntax o (list 'quote o)))))) ;;INT or ID
                          (syntax->list #'(operand ...)))))
        #'(lambda (s) (operator s operand ...))))))
 
