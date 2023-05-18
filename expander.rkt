@@ -1,7 +1,7 @@
 #lang racket/base
 (require slide-easy/config racket/contract racket/vector slideshow/base (for-syntax racket/base racket/syntax))
 (provide program line-separator statement pos mod
-         reset set mark exec send yield show
+         reset set mark exec send yield
          (all-from-out racket/base))
 
 (define-namespace-anchor anchor)
@@ -15,17 +15,16 @@
 
 ;;------------------------------------------------------
 ;;the core datatype and its contract
-(struct status (seq marks table alts) #:extra-constructor-name make-status)
-(struct/c status
-          (vectorof (-> pict? pict?))
-          (hash/c symbol? exact-nonnegative-integer?)
-          (hash/c symbol? (-> pict? pict?))
-          (listof (list/c pict?)))
+(struct status (seq marks table) #:extra-constructor-name make-status)
+(struct/dc status
+           (seq () #:lazy (vectorof (-> pict? pict?)))
+           (marks () #:lazy (hash/c symbol? exact-nonnegative-integer?))
+           (table () #:lazy (hash/c symbol? (-> pict? pict?))))
 ;;------------------------------------------------------
 
 ;;------------------------------------------------------
 ;;functions
-(define (reset s) (struct-copy status s (alts null)))
+(define (reset _) (make-status (vector) (hasheq) (hasheq)))
 (define (set s sym form) (struct-copy status s (table (hash-set (status-table s) sym (eval form namespace)))))
 (define (mark s sym pos) (struct-copy status s (marks (hash-set (status-marks s) sym pos))))
 (define (exec s form) (eval form namespace) s)
@@ -52,9 +51,7 @@
   (define ed (get-position s end))
   (define lst ((if (left-to-right?) reverse values) (vector->list (vector-copy (status-seq s) st ed))))
   (define pic ((apply compose values lst) (current-init-pict)))
-  (struct-copy status s (alts (cons (list pic) (status-alts s)))))
-(define (show s)
-  (slide 'alts (reverse (status-alts s)))
+  (slide pic)
   s)
 ;;------------------------------------------------------
 
@@ -102,17 +99,20 @@
 (module+ test
   (test-case
       "status"
-    (define init (make-status (vector) (hasheq) (hasheq) null))
+    (define init (make-status (vector) (hasheq) (hasheq)))
     (check-eq? init ((line-separator) init))
     
     (define result0 ((statement (set "set" test "(lambda (p) (vc-append 10 p (text \"hello world\")))")) init))
     (define result1 ((statement (send "send" (pos 0) (pos 0) test)) result0))
-    (define result2 ((statement (yield "yield" 0 1)) result1))
 
-    (check-eq? (hash-ref (status-table result2) 'test)
-               (vector-ref (status-seq result2) 0))
-    (check-true (pict? (caar (status-alts result2))))
-    (check-eq? null (status-alts ((statement (reset "reset")) result2)))
+    (check-eq? (hash-ref (status-table result1) 'test)
+               (vector-ref (status-seq result1) 0))
+
+    (define result2 ((statement (reset "reset")) result1))
+
+    (check-equal? (status-seq result2) (vector))
+    (check-equal? (status-marks result2) (hasheq))
+    (check-equal? (status-table result2) (hasheq))
     
     (check-eq? ((statement (exec "exec" "(displayln \"exec : succeed\")")) init)
                init)

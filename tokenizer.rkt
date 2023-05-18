@@ -1,7 +1,7 @@
 #lang racket/base
 (require brag/support)
 
-(define-lex-abbrev keyword (:or "reset" "exec" "set" "send" "mark" "yield" "show"))
+(define-lex-abbrev keyword (:or "reset" "exec" "set" "send" "mark" "yield"))
 
 (define lex
   (lexer-srcloc
