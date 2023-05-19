@@ -1,6 +1,6 @@
 #lang racket/base
 (require slide-easy/config racket/contract racket/vector slideshow/base (for-syntax racket/base racket/syntax))
-(provide program line-separator statement pos mod
+(provide program line-separator statement pos body
          reset set mark exec send yield
          (all-from-out racket/base))
 
@@ -64,7 +64,7 @@
       (cond ((eof-object? v) (reverse r))
             (else (loop (cons v r)))))))
 
-(define-syntax (mod stx)
+(define-syntax (program stx)
   (syntax-case stx ()
     ((_ _ program)
      #'program)
@@ -77,7 +77,7 @@
                   (parameterize ((current-namespace namespace)) (namespace-require (module-path-index-resolve id))) ...
                   program))))))
 
-(define-syntax-rule (program f ...)
+(define-syntax-rule (body f ...)
   (foldl (lambda (o i) (collect-garbage 'incremental) (o i)) (make-status (vector) (hasheq) (hasheq)) (list f ...)))
 
 (define-syntax-rule (line-separator _ ...) values)
