@@ -1,6 +1,6 @@
 #lang racket/base
 (require slide-easy/config racket/contract racket/vector slideshow/base (for-syntax racket/base racket/syntax))
-(provide program line-separator statement pos body
+(provide program statement body
          reset set mark exec send yield
          (all-from-out racket/base))
 
@@ -80,30 +80,27 @@
 (define-syntax-rule (body f ...)
   (foldl (lambda (o i) (collect-garbage 'incremental) (o i)) (make-status (vector) (hasheq) (hasheq)) (list f ...)))
 
-(define-syntax-rule (line-separator _ ...) values)
+#; (define-syntax-rule (line-separator _ ...) values) ;;I use a cut in the parser to delete the item from the parse tree 
 
 (define-syntax (statement stx)
   (syntax-case stx ()
     ((_ (operator _ operand ...))
      (with-syntax (((operand ...)
                     (map (lambda (o) (let ((c (syntax-e o)))
-                                       (cond ((list? c) o) ;;pos
+                                       (cond #; ((list? c) o) ;; I use a splice in the parser to merge the elements of a `pos` node into the surrounding node
                                              ((string? c) (datum->syntax o (list 'syntax (cons 'begin (read-all (open-input-string c)))))) ;;SEXP
                                              (else (datum->syntax o (list 'quote o)))))) ;;INT or ID
                          (syntax->list #'(operand ...)))))
        #'(lambda (s) (operator s operand ...))))))
-
-(define-syntax-rule (pos d) 'd)
 ;;------------------------------------------------------
 
 (module+ test
   (test-case
       "status"
     (define init (make-status (vector) (hasheq) (hasheq)))
-    (check-eq? init ((line-separator) init))
     
     (define result0 ((statement (set "set" test "(lambda (p) (vc-append 10 p (text \"hello world\")))")) init))
-    (define result1 ((statement (send "send" (pos 0) (pos 0) test)) result0))
+    (define result1 ((statement (send "send" 0 0 test)) result0))
 
     (check-eq? (hash-ref (status-table result1) 'test)
                (vector-ref (status-seq result1) 0))

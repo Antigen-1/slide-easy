@@ -8,6 +8,6 @@ exec : "exec" SEXP
 send : "send" pos pos ID*
 yield : "yield" pos pos
 reset : "reset"
-line-separator : NL+
-pos : INT | ID
+/line-separator : NL+
+@pos : INT | ID
 
