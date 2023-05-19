@@ -66,16 +66,16 @@
 
 (define-syntax (program stx)
   (syntax-case stx ()
-    ((_ _ program)
-     #'program)
-    ((_ _ form _ program)
+    ((_ body)
+     #'body)
+    ((_ form body)
      (let ((libs (read-all (open-input-string (syntax->datum #'form)))))
        (with-syntax (((id ...) (datum->syntax stx (map (lambda (_) (generate-temporary 'lib)) libs)))
                      ((lib ...) (datum->syntax stx libs)))
          #'(begin (require racket/runtime-path (for-syntax racket/base))
-                  (define-runtime-module-path-index id 'lib) ...
+                  (define-runtime-module-path-index id lib) ...
                   (parameterize ((current-namespace namespace)) (namespace-require (module-path-index-resolve id))) ...
-                  program))))))
+                  body))))))
 
 (define-syntax-rule (body f ...)
   (foldl (lambda (o i) (collect-garbage 'incremental) (o i)) (make-status (vector) (hasheq) (hasheq)) (list f ...)))
