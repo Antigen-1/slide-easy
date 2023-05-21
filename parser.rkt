@@ -6,7 +6,7 @@ set : "set" ID SEXP
 mark : "mark" ID INT
 exec : "exec" SEXP
 send : "send" pos pos ID*
-yield : "yield" pos pos
+yield : "yield" [pos] [pos]
 reset : "reset"
 line-separator : NL+
 @pos : INT | ID

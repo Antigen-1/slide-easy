@@ -18,7 +18,7 @@
 (struct status (seq marks table) #:extra-constructor-name make-status)
 (struct/dc status
            (seq () #:lazy (vectorof (-> pict? pict?)))
-           (marks () #:lazy (hash/c symbol? exact-nonnegative-integer?))
+           (marks () #:lazy (hash/c (and/c symbol? (not/c 'end)) exact-nonnegative-integer?))
            (table () #:lazy (hash/c symbol? (-> pict? pict?))))
 ;;------------------------------------------------------
 
@@ -29,7 +29,12 @@
 (define (mark s sym pos) (struct-copy status s (marks (hash-set (status-marks s) sym pos))))
 (define (exec s form) (eval form namespace) s)
 
-(define (get-position s p) (if (exact-nonnegative-integer? p) p (hash-ref (status-marks s) p)))
+(define (get-position s p)
+  (if (exact-nonnegative-integer? p)
+      p
+      (if (eq? p 'end)
+          (vector-length (status-seq s))
+          (hash-ref (status-marks s) p))))
 
 (define (send s start end . refs)
   (define st (get-position s start))
@@ -46,7 +51,7 @@
                                (vector-copy! vec st new)
                                (vector-copy! vec (+ st nlen) seq ed)
                                vec))))
-(define (yield s start end)
+(define (yield s (start 0) (end 'end))
   (define st (get-position s start))
   (define ed (get-position s end))
   (define lst ((if (left-to-right?) reverse values) (vector->list (vector-copy (status-seq s) st ed))))
