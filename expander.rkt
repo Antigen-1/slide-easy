@@ -24,11 +24,6 @@
 
 ;;------------------------------------------------------
 ;;functions
-(define (reset _) (make-status (vector) (hasheq) (hasheq)))
-(define (set s sym form) (struct-copy status s (table (hash-set (status-table s) sym (eval form namespace)))))
-(define (mark s sym pos) (struct-copy status s (marks (hash-set (status-marks s) sym pos))))
-(define (exec s form) (eval form namespace) s)
-
 (define (get-position s p)
   (if (exact-nonnegative-integer? p)
       p
@@ -36,6 +31,10 @@
           (vector-length (status-seq s))
           (hash-ref (status-marks s) p))))
 
+(define (reset _) (make-status (vector) (hasheq) (hasheq)))
+(define (set s sym form) (struct-copy status s (table (hash-set (status-table s) sym (eval form namespace)))))
+(define (mark s sym pos) (struct-copy status s (marks (hash-set (status-marks s) sym (get-position s pos)))))
+(define (exec s form) (eval form namespace) s)
 (define (send s start end . refs)
   (define st (get-position s start))
   (define ed (get-position s end))
