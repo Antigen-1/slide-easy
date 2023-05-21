@@ -2,7 +2,8 @@
 (require slide-easy/config racket/contract racket/vector slideshow/base (for-syntax racket/base racket/syntax))
 (provide program statement body
          reset set mark exec send yield
-         (all-from-out racket/base))
+         (all-from-out racket/base)
+         (for-syntax (all-from-out racket/base)))
 
 (define-namespace-anchor anchor)
 (define namespace (module->namespace 'slide-easy/config (namespace-anchor->empty-namespace anchor)))
@@ -76,8 +77,8 @@
      (let ((libs (read-all (open-input-string (syntax->datum #'form)))))
        (with-syntax (((id ...) (datum->syntax stx (map (lambda (_) (generate-temporary 'lib)) libs)))
                      ((lib ...) (datum->syntax stx libs)))
-         #'(begin (require racket/runtime-path (for-syntax racket/base))
-                  (define-runtime-module-path-index id lib) ...
+         #'(begin (require racket/runtime-path)
+                  (define-runtime-module-path-index id 'lib) ...
                   (parameterize ((current-namespace namespace)) (namespace-require (module-path-index-resolve id))) ...
                   body))))))
 
