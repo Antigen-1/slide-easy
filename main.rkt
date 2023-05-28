@@ -42,6 +42,7 @@
 
   )
 
-(module reader racket/base
-  (require "reader.rkt")
-  (provide (all-from-out "reader.rkt")))
+(require "data.rkt" "expander.rkt" pict)
+(provide (all-from-out racket/base pict)
+         install ->pict tag
+         #%app #%call)
