@@ -6,4 +6,4 @@
 
 @defmodule[slide-easy]
 
-You may use this package with the @code{s-exp} meta-language. You can also use it directly to do a lot of heavy lifting, like creating templates.
+You may use this package with @code[#:lang "s-exp slide-easy"]. You can also use it directly to do a lot of heavy lifting, like creating templates.
