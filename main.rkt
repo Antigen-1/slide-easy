@@ -42,7 +42,7 @@
 
   )
 
-(require "data.rkt" "expander.rkt" "config.rkt")
-(provide (all-from-out racket/base "config.rkt")
+(require "data.rkt" "expander.rkt" "config.rkt" pict)
+(provide (all-from-out racket/base "config.rkt" pict)
          install tag
          #%app #%call)
