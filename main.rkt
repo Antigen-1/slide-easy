@@ -42,7 +42,6 @@
 
   )
 
-(require "data.rkt" "expander.rkt" "config.rkt" pict)
-(provide (all-from-out racket/base "config.rkt" pict)
-         install tag
-         #%app #%call)
+(require "expander.rkt" pict slideshow/base)
+(provide (all-from-out racket/base slideshow/base pict)
+         #%app #%call install tag config)
