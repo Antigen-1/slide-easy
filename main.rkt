@@ -44,5 +44,5 @@
 
 (require "data.rkt" "expander.rkt" "config.rkt")
 (provide (all-from-out racket/base "config.rkt")
-         install ->pict tag
+         install tag
          #%app #%call)
