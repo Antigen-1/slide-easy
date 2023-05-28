@@ -1,5 +1,5 @@
 #lang racket/base
-(require "config.rkt" (prefix-in o: "data.rkt") racket/function slideshow/base racket/contract)
+(require "config.rkt" (prefix-in o: "data.rkt") racket/function slideshow/base pict racket/contract)
 (provide install tag config ->pict (rename-out (#%slide-app #%app)) #%call)
 
 (define-syntax-rule (install type pred ->pict)
