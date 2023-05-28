@@ -1,6 +1,6 @@
 #lang racket/base
 (require "config.rkt" (prefix-in o: "data.rkt") racket/function slideshow/base)
-(provide install tag config (rename-out (#%slide-app #%app)) #%call)
+(provide install tag config ->pict (rename-out (#%slide-app #%app)) #%call)
 
 (define-syntax-rule (install type pred ->pict)
   (o:install type pred ->pict))
@@ -11,8 +11,11 @@
 (define-syntax-rule (config token ...)
   (current-slide-configure (curry slide token ...)))
 
+(define-syntax-rule (->pict obj)
+  (o:->pict obj))
+
 (define-syntax-rule (#%slide-app . tokens)
-  (let ((result (->pict (#%app . tokens))))
+  (let ((result (o:->pict (#%app . tokens))))
     ((current-slide-configure) result)
     result))
 
