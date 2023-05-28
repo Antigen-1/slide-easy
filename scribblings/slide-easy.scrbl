@@ -6,4 +6,4 @@
 
 @defmodule[slide-easy]
 
-过程式的幻灯片
+You may use this package with the @code{s-exp} meta-language. You can also use it directly to do a lot of heavy lifting, like creating templates.
