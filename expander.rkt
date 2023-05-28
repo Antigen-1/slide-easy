@@ -1,10 +1,10 @@
 #lang racket/base
-(require slideshow/base)
+(require "config.rkt")
 (provide (rename-out (#%slide-app #%app)) #%call)
 
 (define-syntax-rule (#%slide-app . tokens)
   (let ((result (#%app . tokens)))
-    (slide result)
+    ((current-slide-configure) result)
     result))
 
 (define-syntax-rule (#%call . tokens)
