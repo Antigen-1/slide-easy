@@ -1,5 +1,6 @@
 #lang racket/base
-(require "config.rkt" (prefix-in o: "data.rkt") racket/function slideshow/base pict racket/contract)
+(require "config.rkt" (prefix-in o: "data.rkt") racket/function slideshow/base pict racket/contract
+         (for-syntax racket/base))
 (provide install tag config ->pict (rename-out (#%slide-app #%app)) #%call)
 
 (define-syntax-rule (install type pred ->pict)
@@ -8,8 +9,12 @@
 (define-syntax-rule (tag tag content)
   (o:tag tag content))
 
-(define-syntax-rule (config token ...)
-  (current-slide-configure (curry slide token ...)))
+(define-syntax (config stx)
+  (syntax-case stx ()
+    ((_ (token ...)) #'(current-slide-configure (curry slide token ...)))
+    ((_ (token ...) body ...)
+     #'(parameterize ((current-slide-configure (curry slide token ...)))
+         body ...))))
 
 (define-syntax-rule (->pict obj)
   (o:->pict obj))
