@@ -44,4 +44,4 @@
 
 (require "expander.rkt" pict slideshow/base)
 (provide (all-from-out racket/base slideshow/base pict)
-         #%app #%call install tag config ->pict)
+         #%app #%call install config ~p)
