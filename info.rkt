@@ -1,7 +1,7 @@
 #lang info
 (define collection "slide-easy")
-(define deps '("base"))
-(define build-deps '("scribble-lib" "racket-doc" "rackunit-lib" "slideshow-lib" "sugar"))
+(define deps '("base" "slideshow-lib" "pict-lib"))
+(define build-deps '("scribble-lib" "racket-doc" "rackunit-lib" "sugar"))
 (define scribblings '(("scribblings/slide-easy.scrbl" ())))
 (define pkg-desc "Description Here")
 (define version "0.0")
