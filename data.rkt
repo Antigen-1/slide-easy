@@ -1,6 +1,6 @@
 #lang racket/base
 (require racket/contract pict)
-(provide install ->pict construct)
+(provide install ->pict construct (rename-out (tagged-object-content access)))
 
 ;;--------------------------
 ;;the vertical barrier and generic interfaces
@@ -36,6 +36,9 @@
   (test-case
       "data"
     (install 'title string? titlet)
+
+    (check-equal? titlet (index 'title '->pict))
+    (check-equal? "a" (tagged-object-content (construct 'title "a")))
 
     (define (process s) (->pict (construct 'title s)))
     (define (process1 s) (titlet s))

@@ -44,4 +44,4 @@
 
 (require "expander.rkt" pict slideshow/base)
 (provide (all-from-out racket/base slideshow/base pict)
-         #%app #%ret install config ~o)
+         #%app #%ret install config ~p ~c ~a)
