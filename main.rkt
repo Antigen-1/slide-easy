@@ -42,6 +42,10 @@
 
   )
 
+(module generic racket/base
+  (require "data.rkt")
+  (provide (all-from-out "data.rkt")))
+
 (require "expander.rkt" pict slideshow/base)
 (provide (all-from-out racket/base slideshow/base pict)
-         #%app #%ret install config ~p ~c ~a)
+         #%app #%ret config)
