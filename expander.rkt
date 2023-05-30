@@ -1,5 +1,5 @@
 #lang racket/base
-(require "config.rkt" racket/function slideshow/base pict racket/contract
+(require "config.rkt" racket/function slideshow/base "data.rkt"
          (for-syntax racket/base))
 (provide config (rename-out (#%slide-app #%app) (#%app #%ret)))
 
@@ -11,7 +11,6 @@
          body ...))))
 
 (define-syntax-rule (#%slide-app . tokens)
-  (let ()
-    (define/contract result pict? (#%app . tokens))
-    ((current-slide-configure) result)
+  (let ((result (#%app . tokens)))
+    ((current-slide-configure) (->pict result))
     result))
