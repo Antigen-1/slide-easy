@@ -1,17 +1,17 @@
 #lang racket/base
 (require "config.rkt" "data.rkt" racket/function slideshow/base pict racket/contract
          (for-syntax racket/base))
-(provide config ~p (rename-out (n:install install) (#%slide-app #%app) (#%app #%call)))
+(provide config ~o (rename-out (n:install install) (#%slide-app #%app) (#%app #%ret)))
 
 (define-syntax-rule (n:install infm ...)
   (begin (install . infm) ...))
 
-(define-syntax (~p stx)
+(define-syntax (~o stx)
   (syntax-case stx ()
-    ((_ cont)
-     #'(->pict cont))
-    ((_ type cont)
-     #'(->pict (tag type cont)))))
+    ((_ obj)
+     #'(->pict obj))
+    ((_ type cont ...)
+     #'(construct type cont ...))))
 
 (define-syntax (config stx)
   (syntax-case stx ()
