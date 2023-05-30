@@ -43,9 +43,9 @@
   )
 
 (module generic racket/base
-  (require "data.rkt")
-  (provide (all-from-out "data.rkt")))
+  (require "data.rkt" pict slideshow/base)
+  (provide (all-from-out "data.rkt" pict slideshow/base racket/base)))
 
-(require "expander.rkt" pict slideshow/base)
-(provide (all-from-out racket/base slideshow/base pict)
+(require "expander.rkt")
+(provide (all-from-out racket/base)
          #%app #%ret config)
