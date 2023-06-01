@@ -11,7 +11,7 @@
 
 (define/contract (install type contract ->pict . rest) ;;install a new datatype
   (->i ((type (and/c tag? (not/c has-key?))) (contract contract?) (->pict (contract) (-> contract pict?)))
-       #:rest (rest (contract) (listof (cons/c (and/c tag? (not/c '->pict)) (-> contract any/c ... any))))
+       #:rest (rest (contract) (listof (cons/c (and/c tag? (not/c '->pict)) (-> contract any))))
        any)
   (hash-set! table type (make-hasheq (cons (cons '->pict ->pict) rest))))
 (define/contract (index type op)
