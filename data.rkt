@@ -20,10 +20,8 @@
 
 (struct tagged-object (tag content))
 
-(define (apply-generic op obj . args)
-  (apply (index (tagged-object-tag obj) op)
-         (tagged-object-content obj)
-         args))
+(define (apply-generic op obj)
+  ((index (tagged-object-tag obj) op) (tagged-object-content obj)))
 
 (define (->pict obj)
   (apply-generic '->pict obj))
