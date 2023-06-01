@@ -1,6 +1,22 @@
 #lang racket/base
 (require racket/contract pict)
-(provide install apply-generic ->pict (rename-out (tagged-object tag) (tagged-object-content content)))
+(provide (contract-out (install
+                        (opt/c (->i ((type (and/c tag? (not/c has-key?)))
+                                     (contract contract?)
+                                     (->pict (contract) (-> contract pict?)))
+                                    #:rest (_ (listof (cons/c (and/c tag? (not/c '->pict)) any/c)))
+                                    any)))
+                       (apply-generic
+                        (opt/c (->i ((op tag?)
+                                     (obj (rest op)
+                                          (and/c
+                                           tagged-object?
+                                           (lambda (o)
+                                             (let ((r (index (type o) op #f)))
+                                               (and r (procedure? r) (procedure-arity-includes? r (add1 (length rest)))))))))
+                                    #:rest (rest list?)
+                                    any))))
+         ->pict content tag type)
 
 ;;--------------------------
 ;;the vertical barrier and generic interfaces
@@ -9,19 +25,22 @@
 (define (tag? o) (and (symbol? o) (symbol-interned? o)))
 (define (has-key? p) (hash-has-key? table p))
 
-(define/contract (install type contract ->pict . rest) ;;install a new datatype
-  (->i ((type (and/c tag? (not/c has-key?))) (contract contract?) (->pict (contract) (-> contract pict?)))
-       #:rest (rest (contract) (listof (cons/c (and/c tag? (not/c '->pict)) (-> contract any))))
-       any)
-  (hash-set! table type (make-hasheq (cons (cons '->pict ->pict) rest))))
-(define/contract (index type op)
-  (->i ((type (and/c tag? has-key?)) (op tag?)) #:pre (type op) (hash-has-key? (hash-ref table type) op) any)
-  (hash-ref (hash-ref table type) op))
-
 (struct tagged-object (tag content))
 
-(define (apply-generic op obj)
-  ((index (tagged-object-tag obj) op) (tagged-object-content obj)))
+(define(install type contract ->pict . rest) ;;install a new datatype
+  (define/contract (tag content) (-> contract tagged-object?) (tagged-object type content))
+  (define/contract (content obj) (-> tagged-object? contract) (tagged-object-content obj))
+  (hash-set! table type (vector tag content (make-hasheq (cons (cons '->pict ->pict) rest)))))
+(define (index type op (fail (lambda () (raise (make-exn:fail:contract "Cannot resolve this operation" (current-continuation-marks)))))) ;;find functions
+  (hash-ref (vector-ref (hash-ref table type) 2) op fail))
+(define (content obj) ;;retrieve contents
+  ((vector-ref (hash-ref table (type obj)) 1) obj))
+(define (tag type content) ;;tag objects
+  ((vector-ref (hash-ref table type) 0) content))
+(define/contract type (-> tagged-object? (and/c tag? has-key?)) tagged-object-tag)
+
+(define (apply-generic op obj . rest) ;;call the function with the object's content and other by-position arguments
+  (apply (index (type obj) op) (content obj) rest))
 
 (define (->pict obj)
   (apply-generic '->pict obj))
@@ -36,9 +55,9 @@
 
     (check-equal? titlet (index 'title '->pict))
 
-    (define (process s) (->pict (tagged-object 'title s)))
+    (define (process s) (->pict (tag 'title s)))
     (define (process1 s) (titlet s))
     
-    (compare (time-repeat 100 (process "Hello, World!"))
+    (compare (time-repeat 1000 (process "Hello, World!"))
              process
              process1)))
