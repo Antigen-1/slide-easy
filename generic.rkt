@@ -1,11 +1,8 @@
 #lang racket/base
 (require racket/contract pict)
-(provide (contract-out (install
-                        (opt/c (->i ((type (and/c tag? (not/c has-key?)))
-                                     (contract contract?)
-                                     (->pict (contract) (-> contract pict?)))
-                                    #:rest (_ (listof (cons/c (and/c tag? (not/c '->pict)) any/c)))
-                                    any)))
+(provide (contract-out #:unprotected-submodule unsafe ;;the structure is still protected though
+                       (install
+                        (opt/c (-> (and/c tag? (not/c has-key?)) contract? (-> any/c pict?) (cons/c (and/c tag? (not/c '->pict)) any/c) ... any)))
                        (apply-generic
                         (opt/c (->i ((op tag?)
                                      (obj (rest op)
@@ -15,8 +12,11 @@
                                              (let ((r (index (type o) op #f)))
                                                (and r (procedure? r) (procedure-arity-includes? r (add1 (length rest)))))))))
                                     #:rest (rest list?)
-                                    any))))
-         ->pict content tag type)
+                                    any)))
+                       (->pict (-> tagged-object? any/c))
+                       (content (-> tagged-object? any/c))
+                       (tag (-> any/c any/c tagged-object?))
+                       (type (-> tagged-object? any/c))))
 
 ;;--------------------------
 ;;the vertical barrier and generic interfaces
@@ -26,18 +26,24 @@
 (define (has-key? p) (hash-has-key? table p))
 
 (struct tagged-object (tag content))
+(struct/dc tagged-object
+           (tag (and/c tag? has-key?))
+           (content (tag) (get-contract tag)))
 
-(define(install type contract ->pict . rest) ;;install a new datatype
-  (define/contract (tag content) (-> contract tagged-object?) (tagged-object type content))
-  (define/contract (content obj) (-> tagged-object? contract) (tagged-object-content obj))
-  (hash-set! table type (vector tag content (make-hasheq (cons (cons '->pict ->pict) rest)))))
+(define (install type contract ->pict . rest) ;;install a new datatype
+  (hash-set! table type (vector contract (make-hasheq (cons (cons '->pict ->pict) rest)))))
 (define (index type op (fail (lambda () (raise (make-exn:fail:contract "Cannot resolve this operation" (current-continuation-marks)))))) ;;find functions
-  (hash-ref (vector-ref (hash-ref table type) 2) op fail))
-(define (content obj) ;;retrieve contents
-  ((vector-ref (hash-ref table (type obj)) 1) obj))
-(define (tag type content) ;;tag objects
-  ((vector-ref (hash-ref table type) 0) content))
-(define/contract type (-> tagged-object? (and/c tag? has-key?)) tagged-object-tag)
+  (hash-ref (vector-ref (hash-ref table type) 1) op fail))
+(define (get-contract type) ;;find contracts
+  (vector-ref (hash-ref table type) 0))
+
+;;alias for compatibility
+(define content ;;retrieve contents
+  tagged-object-content)
+(define tag ;;tag objects
+  tagged-object)
+(define type ;;retrieve type tags
+  tagged-object-tag)
 
 (define (apply-generic op obj . rest) ;;call the function with the object's content and other by-position arguments
   (apply (index (type obj) op) (content obj) rest))

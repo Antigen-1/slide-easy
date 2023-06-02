@@ -1,5 +1,5 @@
 #lang racket/base
-(require "config.rkt" racket/function slideshow/base "data.rkt"
+(require "config.rkt" racket/function slideshow/base "generic.rkt"
          (for-syntax racket/base))
 (provide config (rename-out (#%slide-app #%app) (#%app #%ret)))
 
