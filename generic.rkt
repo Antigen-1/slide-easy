@@ -3,6 +3,14 @@
 (provide (contract-out #:unprotected-submodule unsafe ;;the structure is still protected though
                        (install
                         (opt/c (-> (and/c tag? (not/c has-key?)) contract? (-> any/c pict?) (cons/c (and/c tag? (not/c '->pict)) any/c) ... any)))
+                       (rename assign attach
+                               (opt/c (->i ((tag (and/c tag? has-key?)))
+                                           #:rest (rest (tag) (listof (cons/c (and/c tag? (not/c (lambda (op) (index tag op #f)))) any/c)))
+                                           any)))
+                       (assign
+                        (opt/c (->i ((_ (and/c tag? has-key?)))
+                                    #:rest (rest (listof (cons/dc (op tag?) (proc (op) (if (eq? op '->pict) (-> any/c pict?) any/c)))))
+                                    any)))
                        (apply-generic
                         (opt/c (->i ((op tag?)
                                      (obj (rest op)
@@ -13,6 +21,7 @@
                                                (and r (procedure? r) (procedure-arity-includes? r (add1 (length rest)))))))))
                                     #:rest (rest list?)
                                     any)))
+		       (tagged-object? (-> any/c boolean?))
                        (->pict (-> tagged-object? any/c))
                        (content (-> tagged-object? any/c))
                        (tag (-> any/c any/c tagged-object?))
@@ -32,6 +41,8 @@
 
 (define (install type contract ->pict . rest) ;;install a new datatype
   (hash-set! table type (vector contract (make-hasheq (cons (cons '->pict ->pict) rest)))))
+(define (assign type . rest) ;;modify fuctions
+  (map (lambda (pair) (hash-set! (vector-ref (hash-ref table type) 1) (car pair) (cdr pair))) rest))
 (define (index type op (fail (lambda () (raise (make-exn:fail:contract "Cannot resolve this operation" (current-continuation-marks)))))) ;;find functions
   (hash-ref (vector-ref (hash-ref table type) 1) op fail))
 (define (get-contract type) ;;find contracts
