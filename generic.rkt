@@ -24,7 +24,7 @@
                        (tagged-object? (-> any/c boolean?))
                        (->pict (-> tagged-object? any))
                        (content (-> tagged-object? any))
-                       (tag (opt/c (->i ((type (and/c tag? has-key?)) (_ any/c)) (result (type) (tagged-object/c type)))))
+                       (tag (opt/c (->i ((type (and/c tag? has-key?)) (content (type) (get-contract type))) (result tagged-object?))))
                        (type (-> tagged-object? any))))
 
 ;;--------------------------
@@ -35,8 +35,6 @@
 (define (has-key? p) (hash-has-key? table p))
 
 (struct tagged-object (tag content))
-(define-opt/c (tagged-object/c type)
-  (struct/c tagged-object type (get-contract type)))
 
 (define (install type contract ->pict . rest) ;;install a new datatype
   (hash-set! table type (vector contract (make-hasheq (cons (cons '->pict ->pict) rest)))))
