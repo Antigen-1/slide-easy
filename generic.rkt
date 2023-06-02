@@ -1,6 +1,8 @@
 #lang racket/base
 (require racket/contract pict)
 (provide (contract-out #:unprotected-submodule unsafe ;;the structure is still protected though
+                       (tagged-object? (-> any/c boolean?))
+                       #:exists tagged-object?
                        (install
                         (opt/c (-> (and/c tag? (not/c has-key?)) contract? (-> any/c pict?) (cons/c (and/c tag? (not/c '->pict)) any/c) ... any)))
                        (rename assign attach
@@ -21,11 +23,10 @@
                                                (and r (procedure? r) (procedure-arity-includes? r (add1 (length rest)))))))))
                                     #:rest (rest list?)
                                     any)))
-		       (tagged-object? (-> any/c boolean?))
-                       (->pict (-> tagged-object? any/c))
-                       (content (-> tagged-object? any/c))
+                       (->pict (-> tagged-object? any))
+                       (content (-> tagged-object? any))
                        (tag (-> any/c any/c tagged-object?))
-                       (type (-> tagged-object? any/c))))
+                       (type (-> tagged-object? any))))
 
 ;;--------------------------
 ;;the vertical barrier and generic interfaces
