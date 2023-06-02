@@ -1,8 +1,6 @@
 #lang racket/base
 (require racket/contract pict)
 (provide (contract-out #:unprotected-submodule unsafe ;;the structure is still protected though
-                       (tagged-object? (-> any/c boolean?))
-                       #:exists tagged-object?
                        (install
                         (opt/c (-> (and/c tag? (not/c has-key?)) contract? (-> any/c pict?) (cons/c (and/c tag? (not/c '->pict)) any/c) ... any)))
                        (rename assign attach
@@ -23,9 +21,10 @@
                                                (and r (procedure? r) (procedure-arity-includes? r (add1 (length rest)))))))))
                                     #:rest (rest list?)
                                     any)))
+                       (tagged-object? (-> any/c boolean?))
                        (->pict (-> tagged-object? any))
                        (content (-> tagged-object? any))
-                       (tag (-> any/c any/c tagged-object?))
+                       (tag (opt/c (->i ((type (and/c tag? has-key?)) (_ any/c)) (result (type) (tagged-object/c type)))))
                        (type (-> tagged-object? any))))
 
 ;;--------------------------
@@ -36,9 +35,8 @@
 (define (has-key? p) (hash-has-key? table p))
 
 (struct tagged-object (tag content))
-(struct/dc tagged-object
-           (tag (and/c tag? has-key?))
-           (content (tag) (get-contract tag)))
+(define-opt/c (tagged-object/c type)
+  (struct/c tagged-object type (get-contract type)))
 
 (define (install type contract ->pict . rest) ;;install a new datatype
   (hash-set! table type (vector contract (make-hasheq (cons (cons '->pict ->pict) rest)))))
