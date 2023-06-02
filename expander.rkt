@@ -11,6 +11,6 @@
          body ...))))
 
 (define-syntax-rule (#%slide-app . tokens)
-  (let ((result (#%app . tokens)))
-    ((current-slide-configure) (->pict result))
-    result))
+  (call-slide (#%app . tokens)))
+
+(define (call-slide obj) ((current-slide-configure) (->pict obj)) obj)
