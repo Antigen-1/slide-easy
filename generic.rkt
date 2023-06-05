@@ -1,11 +1,11 @@
 #lang racket/base
-(require racket/contract pict racket/list)
+(require racket/contract pict)
 (provide (contract-out #:unprotected-submodule unsafe
                        (install
                         (opt/c (->i ((type (and/c (not/c has-key?)
                                                   (or/c tag?
-                                                        (list/c (and/c tag? has-key?) tag?)
-                                                        (and/c (cons/c tag? (cons/c tag? (non-empty-listof tag?))) (lambda (k) (has-key? (drop-right k 1)))))))
+                                                        (list/c tag? (and/c tag? has-key?))
+                                                        (and/c (cons/c tag? (cons/c tag? (non-empty-listof tag?))) (lambda (k) (has-key? (cdr k)))))))
                                      (contract contract?)
                                      (coerce (type) (-> any/c (if (tag? type) pict? any/c))))
                                     #:rest (rest (listof (cons/c tag? any/c)))
@@ -67,14 +67,14 @@
   (define types (type obj))
   (cond ((tag? types) ((get-coerce types) (content obj)))
         ((null? (cddr types))
-         (tag (car types) ((get-coerce types) (content obj))))
-        (else (tag (drop-right types 1) ((get-coerce types) (content obj))))))
+         (tag (cadr types) ((get-coerce types) (content obj))))
+        (else (tag (cdr types) ((get-coerce types) (content obj))))))
 (define (->pict obj) ;;generate pict without tagging and untagging
   (define types (type obj))
   (let loop ((types types) (object (content obj)))
     (cond ((tag? types) ((get-coerce types) object))
           ((null? (cdr types)) ((get-coerce (car types)) object))
-          (else (loop (drop-right types 1) ((get-coerce types) object))))))
+          (else (loop (cdr types) ((get-coerce types) object))))))
 ;;--------------------------
 
 (module+ test
@@ -83,19 +83,19 @@
   (test-case
       "data"
     (install 'pict pict? values)
-    (install '(pict title) string? titlet (cons 'length string-length))
+    (install '(title pict) string? titlet (cons 'length string-length))
 
-    (check-equal? string-length (index '(pict title) 'length))
-    (check-equal? titlet (get-coerce '(pict title)))
-    (check-equal? string? (get-contract '(pict title)))
+    (check-equal? string-length (index '(title pict) 'length))
+    (check-equal? titlet (get-coerce '(title pict)))
+    (check-equal? string? (get-contract '(title pict)))
 
-    (assign '(pict title) (cons 'length (compose add1 string-length)))
-    (check-eq? (apply-generic 'length (tag '(pict title) "abc")) 4)
+    (assign '(title pict) (cons 'length (compose add1 string-length)))
+    (check-eq? (apply-generic 'length (tag '(title pict) "abc")) 4)
 
     (define (process s) (titlet s)) 
-    (define (process1 s) (->pict (tag '(pict title) s)))
+    (define (process1 s) (->pict (tag '(title pict) s)))
     (define (process2 s) (->pict (tag 'pict (titlet s))))
-    (define (process3 s) (let loop ((result (tag '(pict title) s)))
+    (define (process3 s) (let loop ((result (tag '(title pict) s)))
                            (cond ((pict? result) result)
                                  (else (loop (coerce result))))))
     
