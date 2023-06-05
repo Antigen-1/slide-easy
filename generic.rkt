@@ -8,7 +8,7 @@
                                                         (lambda (k) (has-key? (drop-right k 1))))))
                                      (contract contract?)
                                      (coerce (type) (-> any/c (if (tag? type) pict? any/c))))
-                                    #:rest (listof (cons/c tag? any/c))
+                                    #:rest (rest (listof (cons/c tag? any/c)))
                                     any)))
                        (assign (-> (and/c has-key? key/c) (cons/c tag? any/c) ... any))
                        (apply-generic
