@@ -2,7 +2,9 @@
 (require racket/contract pict racket/list)
 (provide (contract-out #:unprotected-submodule unsafe
                        (install
-                        (opt/c (->i ((type (and/c (not/c has-key?) key/c))
+                        (opt/c (->i ((type (and/c (not/c has-key?)
+                                                  key/c
+                                                  (lambda (k) (or (tag? k) (has-key? (drop-right k 1))))))
                                      (contract contract?)
                                      (coerce (type) (-> any/c (if (tag? type) pict? any/c))))
                                     #:rest (listof (cons/c tag? any/c))
@@ -36,7 +38,7 @@
 
 (define (tag? o) (and (symbol? o) (symbol-interned? o)))
 (define (has-key? p) (hash-has-key? table p))
-(define key/c (or/c tag? (cons/c (and/c tag? has-key?) (non-empty-listof tag?))))
+(define key/c (or/c tag? (cons/c tag? (non-empty-listof tag?))))
 
 (struct tagged-object (tag content) #:transparent)
 
