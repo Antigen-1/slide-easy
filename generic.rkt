@@ -3,8 +3,9 @@
 (provide (contract-out #:unprotected-submodule unsafe
                        (install
                         (opt/c (->i ((type (and/c (not/c has-key?)
-                                                  key/c
-                                                  (lambda (k) (or (tag? k) (has-key? (drop-right k 1))))))
+                                                  (or/c tag?
+                                                        (list/c (and/c tag? has-key?) tag?)
+                                                        (lambda (k) (has-key? (drop-right k 1))))))
                                      (contract contract?)
                                      (coerce (type) (-> any/c (if (tag? type) pict? any/c))))
                                     #:rest (listof (cons/c tag? any/c))
