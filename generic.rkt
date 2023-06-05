@@ -5,12 +5,12 @@
                         (opt/c (->i ((type (and/c (not/c has-key?)
                                                   (or/c tag?
                                                         (list/c (and/c tag? has-key?) tag?)
-                                                        (lambda (k) (has-key? (drop-right k 1))))))
+                                                        (and/c (cons/c tag? (cons/c tag? (non-empty-listof tag?))) (lambda (k) (has-key? (drop-right k 1)))))))
                                      (contract contract?)
                                      (coerce (type) (-> any/c (if (tag? type) pict? any/c))))
                                     #:rest (rest (listof (cons/c tag? any/c)))
                                     any)))
-                       (assign (-> (and/c has-key? key/c) (cons/c tag? any/c) ... any))
+                       (assign (-> has-key? (cons/c tag? any/c) ... any))
                        (apply-generic
                         (opt/c (->i ((op tag?)
                                      (obj (rest op)
@@ -23,12 +23,12 @@
                                     any)))
                        (tagged-object? (-> any/c boolean?))
                        (->pict (-> tagged-object? any))
-                       (tag (opt/c (->i ((type (and/c key/c has-key?)) (content (type) (get-contract type))) (result tagged-object?))))
+                       (tag (opt/c (->i ((type has-key?) (content (type) (get-contract type))) (result tagged-object?))))
                        (coerce (-> tagged-object? any))
                        (type (-> tagged-object? any)))
          (contract-out ;;`attach` is not included in the `unsafe` submodule
           (rename assign attach
-                  (opt/c (->i ((type (and/c has-key? key/c)))
+                  (opt/c (->i ((type has-key?))
                               #:rest (rest (type) (listof (cons/c (and/c tag? (not/c (lambda (op) (index type op #f)))) any/c)))
                               any))))
          )
@@ -39,7 +39,6 @@
 
 (define (tag? o) (and (symbol? o) (symbol-interned? o)))
 (define (has-key? p) (hash-has-key? table p))
-(define key/c (or/c tag? (cons/c tag? (non-empty-listof tag?))))
 
 (struct tagged-object (tag content) #:transparent)
 
