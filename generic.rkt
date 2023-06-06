@@ -7,7 +7,7 @@
                                                         (list/c tag? (and/c tag? has-key?))
                                                         (and/c (cons/c tag? (cons/c tag? (non-empty-listof tag?))) (lambda (k) (has-key? (cdr k)))))))
                                      (contract contract?)
-                                     (coerce (type) (-> any/c (if (tag? type) pict? (get-contract (cdr type))))))
+                                     (coerce (type) (-> any/c (if (tag? type) pict? (get-contract (super type))))))
                                     #:rest (rest (listof (cons/c tag? any/c)))
                                     any)))
                        (assign (-> has-key? (cons/c tag? any/c) ... any))
@@ -25,7 +25,8 @@
                        (tag (opt/c (->i ((type has-key?) (content (type) (get-contract type))) (result tagged-object?))))
                        (coerce (opt/c (->i ((object (dest) (struct/dc tagged-object
                                                                       (tag (if dest
-                                                                               (lambda (l) (findf (lambda (t) (eq? t dest)) l))
+                                                                               (or/c (lambda (t) (eq? t dest))
+                                                                                     (and/c list? (lambda (l) (findf (lambda (t) (eq? t dest)) l))))
                                                                                any/c))
                                                                       (content any/c))))
                                            ((dest (or/c #f tag?)))
@@ -68,18 +69,19 @@
 (define type ;;retrieve type tags
   tagged-object-tag)
 
+;;resolve the hierarchies of types
+(define (super type)
+  (if (null? (cddr type)) (cadr type) (cdr type)))
+(define (current type)
+  (if (tag? type) type (car type)))
+
 (define (apply-generic op obj . rest) ;;call the function with the object's content and other by-position arguments
   (apply (index (type obj) op) (content obj) rest))
 (define (coerce obj (dest #f)) ;;coerce the content of the object
   (let loop ((types (type obj)) (content (content obj)))
     (cond ((and (tag? types) (not dest)) ((get-coerce types) content))
-          ((and (tag? types) (eq? types dest)) (tag types content))
-          ((and (null? (cddr types)) (not dest))
-           ((get-coerce (cadr types)) ((get-coerce types) content)))
-          ((and (null? (cddr types)) (eq? dest (cadr types)))
-           (tag (cadr types) ((get-coerce types) content)))
-          ((eq? dest (car types)) (tag types content))
-          (else (loop (cdr types) ((get-coerce types) content))))))
+          ((eq? dest (current types)) (tag types content))
+          (else (loop (super types) ((get-coerce types) content))))))
 ;;--------------------------
 
 (module+ test
