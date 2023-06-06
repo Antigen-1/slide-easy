@@ -7,7 +7,7 @@
                                                         (list/c tag? (and/c tag? has-key?))
                                                         (and/c (cons/c tag? (cons/c tag? (non-empty-listof tag?))) (lambda (k) (has-key? (cdr k)))))))
                                      (contract contract?)
-                                     (coerce (type) (-> any/c (if (tag? type) pict? any/c))))
+                                     (coerce (type) (-> any/c (if (tag? type) pict? (get-contract (cdr type))))))
                                     #:rest (rest (listof (cons/c tag? any/c)))
                                     any)))
                        (assign (-> has-key? (cons/c tag? any/c) ... any))
@@ -22,11 +22,18 @@
                                     #:rest (rest list?)
                                     any)))
                        (tagged-object? (-> any/c boolean?))
-                       (->pict (-> tagged-object? any))
                        (tag (opt/c (->i ((type has-key?) (content (type) (get-contract type))) (result tagged-object?))))
-                       (coerce (-> tagged-object? any))
+                       (coerce (opt/c (->i ((object (dest) (struct/dc tagged-object
+                                                                      (tag (if dest
+                                                                               (lambda (l) (findf (lambda (t) (eq? t dest)) l))
+                                                                               any/c))
+                                                                      (content any/c))))
+                                           ((dest (or/c #f tag?)))
+                                           any)))
                        (type (-> tagged-object? any)))
-         (contract-out ;;`attach` is not included in the `unsafe` submodule
+         (contract-out ;;`attach` and `->pict` is not included in the `unsafe` submodule
+          (rename coerce ->pict
+                  (-> tagged-object? any))
           (rename assign attach
                   (opt/c (->i ((type has-key?))
                               #:rest (rest (type) (listof (cons/c (and/c tag? (not/c (lambda (op) (index type op #f)))) any/c)))
@@ -63,18 +70,16 @@
 
 (define (apply-generic op obj . rest) ;;call the function with the object's content and other by-position arguments
   (apply (index (type obj) op) (content obj) rest))
-(define (coerce obj) ;;coerce for once
-  (define types (type obj))
-  (cond ((tag? types) ((get-coerce types) (content obj)))
-        ((null? (cddr types))
-         (tag (cadr types) ((get-coerce types) (content obj))))
-        (else (tag (cdr types) ((get-coerce types) (content obj))))))
-(define (->pict obj) ;;generate pict without tagging and untagging
-  (define types (type obj))
-  (let loop ((types types) (object (content obj)))
-    (cond ((tag? types) ((get-coerce types) object))
-          ((null? (cdr types)) ((get-coerce (car types)) object))
-          (else (loop (cdr types) ((get-coerce types) object))))))
+(define (coerce obj (dest #f)) ;;coerce the content of the object
+  (let loop ((types (type obj)) (content (content obj)))
+    (cond ((and (tag? types) (not dest)) ((get-coerce types) content))
+          ((and (tag? types) (eq? types dest)) (tag types content))
+          ((and (null? (cddr types)) (not dest))
+           ((get-coerce (cadr types)) ((get-coerce types) content)))
+          ((and (null? (cddr types)) (eq? dest (cadr types)))
+           (tag (cadr types) ((get-coerce types) content)))
+          ((eq? dest (car types)) (tag types content))
+          (else (loop (cdr types) ((get-coerce types) content))))))
 ;;--------------------------
 
 (module+ test
@@ -93,11 +98,9 @@
     (check-eq? (apply-generic 'length (tag '(title pict) "abc")) 4)
 
     (define (process s) (titlet s)) 
-    (define (process1 s) (->pict (tag '(title pict) s)))
-    (define (process2 s) (->pict (tag 'pict (titlet s))))
-    (define (process3 s) (let loop ((result (tag '(title pict) s)))
-                           (cond ((pict? result) result)
-                                 (else (loop (coerce result))))))
+    (define (process1 s) (coerce (tag '(title pict) s)))
+    (define (process2 s) (coerce (tag 'pict (titlet s))))
+    (define (process3 s) (coerce (coerce (tag '(title pict) s) 'pict)))
     
     (compare (time-repeat 10000 (process "Hello, World!"))
              process
