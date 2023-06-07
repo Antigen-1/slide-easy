@@ -4,8 +4,8 @@
                        (install
                         (opt/c (->i ((type (and/c (not/c has-key?)
                                                   (or/c tag?
-                                                        (and/c (*list/c tag? tag? tag?)
-                                                               (lambda (k) (has-key? (super k)))))))
+                                                        (list/c tag? (and tag? has-key?))
+                                                        (cons/c tag? (and/c list? has-key?)))))
                                      (contract contract?)
                                      (coerce (type) (-> any/c (if (tag? type) pict? (get-contract (super type))))))
                                     #:rest (rest (listof (cons/c tag? any/c)))
