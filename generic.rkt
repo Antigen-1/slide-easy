@@ -4,7 +4,7 @@
                        (install
                         (opt/c (->i ((type (and/c (not/c has-key?)
                                                   (or/c tag?
-                                                        (and/c (cons/c tag? (non-empty-listof tag?))
+                                                        (and/c (*list/c tag? tag? tag?)
                                                                (lambda (k) (has-key? (super k)))))))
                                      (contract contract?)
                                      (coerce (type) (-> any/c (if (tag? type) pict? (get-contract (super type))))))
@@ -25,8 +25,7 @@
                        (tag (opt/c (->i ((type has-key?) (content (type) (get-contract type))) (result tagged-object?))))
                        (coerce (opt/c (->i ((object (dest) (struct/c tagged-object
                                                                      (if dest
-                                                                         (or/c (lambda (t) (eq? t dest))
-                                                                               (and/c list? (lambda (l) (findf (lambda (t) (eq? t dest)) l))))
+                                                                         (or/c dest (and/c list? (lambda (l) (findf (lambda (t) (eq? t dest)) l))))
                                                                          any/c)
                                                                      any/c)))
                                            ((dest (or/c #f tag?)))
