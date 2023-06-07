@@ -23,12 +23,12 @@
                                     any)))
                        (tagged-object? (-> any/c boolean?))
                        (tag (opt/c (->i ((type has-key?) (content (type) (get-contract type))) (result tagged-object?))))
-                       (coerce (opt/c (->i ((object (dest) (struct/dc tagged-object
-                                                                      (tag (if dest
-                                                                               (or/c (lambda (t) (eq? t dest))
-                                                                                     (and/c list? (lambda (l) (findf (lambda (t) (eq? t dest)) l))))
-                                                                               any/c))
-                                                                      (content any/c))))
+                       (coerce (opt/c (->i ((object (dest) (struct/c tagged-object
+                                                                     (if dest
+                                                                         (or/c (lambda (t) (eq? t dest))
+                                                                               (and/c list? (lambda (l) (findf (lambda (t) (eq? t dest)) l))))
+                                                                         any/c)
+                                                                     any/c)))
                                            ((dest (or/c #f tag?)))
                                            any)))
                        (type (-> tagged-object? any)))
@@ -48,7 +48,7 @@
 (define (tag? o) (and (symbol? o) (symbol-interned? o)))
 (define (has-key? p) (hash-has-key? table p))
 
-(struct tagged-object (tag content) #:transparent)
+(struct tagged-object (type content) #:transparent)
 
 (define (install type contract coerce . rest) ;;install datatypes
   (hash-set! table type (vector contract coerce (make-hasheq rest))))
@@ -67,7 +67,7 @@
 (define tag ;;tag objects
   tagged-object)
 (define type ;;retrieve type tags
-  tagged-object-tag)
+  tagged-object-type)
 
 ;;resolve the hierarchies of types
 (define (super type)
