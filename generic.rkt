@@ -10,7 +10,11 @@
                                      (coerce (type) (-> any/c (if (tag? type) pict? (get-contract (super type))))))
                                     #:rest (rest (listof (cons/c tag? any/c)))
                                     any)))
-                       (assign (-> has-key? (cons/c tag? any/c) ... any))
+                       #; (assign (-> has-key? (cons/c tag? any/c) ... any)) ;;suppress users from mutating methods after they are installed due to security question marks
+                       (rename assign attach
+                               (opt/c (->i ((type has-key?))
+                                           #:rest (rest (type) (listof (cons/c (and/c tag? (not/c (lambda (op) (index type op #f)))) any/c)))
+                                           any)))
                        (apply-generic
                         (opt/c (->i ((op tag?)
                                      (obj (rest op)
@@ -31,13 +35,9 @@
                                            ((dest (or/c #f tag?)))
                                            any)))
                        (type (-> tagged-object? any)))
-         (contract-out ;;`attach` and `->pict` is not included in the `unsafe` submodule
+         (contract-out ;;`->pict` is not included in the `unsafe` submodule
           (rename coerce ->pict
-                  (-> tagged-object? any))
-          (rename assign attach
-                  (opt/c (->i ((type has-key?))
-                              #:rest (rest (type) (listof (cons/c (and/c tag? (not/c (lambda (op) (index type op #f)))) any/c)))
-                              any))))
+                  (-> tagged-object? any)))
          )
 
 ;;--------------------------
