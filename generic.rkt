@@ -35,7 +35,7 @@
                                                                   (or/c (not/c dest)
                                                                         (lambda (o) (has-tag? (type o) dest)))))
                                             (dest (or/c #f tag?)))
-                                           (result (or/c tagged any/c)))))
+                                           (result (or/c tagged pict?)))))
                        (->pict (-> tagged any))
                        
                        #; (tagged-object? (-> any/c boolean?)) ;;it always returns false because of the abstract contract
