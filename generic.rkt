@@ -25,13 +25,11 @@
                                            any)))
                        (apply-generic
                         (opt/c (->i ((op tag?)
-                                     (obj (rest op)
-                                          (and/c
-                                           tagged
-                                           (lambda (o)
-                                             (let ((r (index (type o) op #f)))
-                                               (and r (procedure? r) (procedure-arity-includes? r (add1 (length rest)))))))))
+                                     (obj tagged))
                                     #:rest (rest list?)
+                                    #:pre (obj op rest)
+                                    (let ((r (index (type obj) op #f)))
+                                      (and r (procedure? r) (procedure-arity-includes? r (add1 (length rest)))))
                                     any)))
                        (coerce (opt/c (->i ((object (dest) (and/c tagged
                                                                   (or/c (not/c dest)
