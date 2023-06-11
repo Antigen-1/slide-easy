@@ -1,13 +1,21 @@
 #lang racket/base
-(require racket/contract pict)
+(require racket/contract pict racket/vector)
+;;there are no contracts outside this `provide` form, while contracts for representations are still placed into the table
 (provide (contract-out #:unprotected-submodule unsafe
+                       #:exists (hierarchies tagged)
+                       (rename has-key? installed?
+                               (-> hierarchies boolean?))
+                       
                        (install
                         (opt/c (->i ((type (and/c (not/c has-key?)
-                                                  (or/c tag?
-                                                        (list/c tag? (and tag? has-key?))
-                                                        (cons/c tag? (and/c list? has-key?)))))
+                                                  hierarchies
+                                                  (or/c root?
+                                                        (and/c
+                                                         (lambda (l) (> (depth l) 1))
+                                                         (lambda (l) (tag? (current l)))
+                                                         (lambda (l) (has-key? (super l)))))))
                                      (contract contract?)
-                                     (coerce (type) (-> any/c (if (tag? type) pict? (get-contract (super type))))))
+                                     (coerce (type) (-> any/c (if (root? type) pict? (get-contract (super type))))))
                                     #:rest (rest (listof (cons/c tag? any/c)))
                                     any)))
                        #; (assign (-> has-key? (cons/c tag? any/c) ... any)) ;;suppress users from mutating methods after they are installed due to security question marks
@@ -19,25 +27,41 @@
                         (opt/c (->i ((op tag?)
                                      (obj (rest op)
                                           (and/c
-                                           tagged-object?
+                                           tagged
                                            (lambda (o)
                                              (let ((r (index (type o) op #f)))
                                                (and r (procedure? r) (procedure-arity-includes? r (add1 (length rest)))))))))
                                     #:rest (rest list?)
                                     any)))
-                       (tagged-object? (-> any/c boolean?))
-                       (tag (opt/c (->i ((type has-key?) (content (type) (get-contract type))) (result tagged-object?))))
-                       (coerce (opt/c (->i ((object (dest) (struct/c tagged-object
-                                                                     (if dest
-                                                                         (or/c dest (and/c list? (lambda (l) (findf (lambda (t) (eq? t dest)) l))))
-                                                                         any/c)
-                                                                     any/c)))
+                       (coerce (opt/c (->i ((object (dest) (and/c tagged
+                                                                  (or/c (not/c dest)
+                                                                        (lambda (o) (has-tag? (type o) dest))))))
                                            ((dest (or/c #f tag?)))
                                            any)))
-                       (type (-> tagged-object? any)))
-         (contract-out ;;`->pict` is not included in the `unsafe` submodule
-          (rename coerce ->pict
-                  (-> tagged-object? any)))
+                       (rename coerce ->pict ;;it's the same as `coerce` within the unsafe submodule
+                               (-> tagged any))
+                       
+                       (tagged-object? (-> any/c boolean?))
+                       (tag (opt/c (->i ((type has-key?) (content (type) (get-contract type))) (result tagged))))
+                       (type (-> tagged hierarchies))
+
+                       ;;primitives for handling types
+                       ;;they never check if types are installed
+                       (make-type (-> tag? ... hierarchies))
+                       (prefix (-> (or/c tag? hierarchies) hierarchies hierarchies))
+                       (ref (opt/c (->i ((type (dep) (and/c hierarchies (lambda (l) (> (depth l) dep)))) (dep exact-nonnegative-integer?)) (result tag?))))
+                       (sub (opt/c (->i ((type hierarchies)
+                                         (start exact-nonnegative-integer?)
+                                         (end (type start) (and/c exact-nonnegative-integer?
+                                                                  (lambda (e) (and (>= e start) (< e (depth type)))))))
+                                        (result hierarchies))))
+                       (depth (-> hierarchies exact-nonnegative-integer?))
+                       (has-tag? (-> hierarchies tag? boolean?))
+
+                       ;;these operations are not primitives, but they still never check if types are installed 
+                       (current (-> (and/c hierarchies (lambda (l) (exact-positive-integer? (depth l)))) tag?))
+                       (super (-> (and/c hierarchies (not/c root?)) hierarchies))
+                       (root? (-> hierarchies boolean?)))
          )
 
 ;;--------------------------
@@ -60,25 +84,43 @@
 (define (get-coerce type) ;;get `coerce` functions
   (vector-ref (hash-ref table type) 1))
 
-;;alias for compatibility
+;;resolve the hierarchies of types
+(define (prefix type base)
+  (vector-append (if (tag? type) (vector type) type) base))
+(define (make-type . types)
+  (list->vector types))
+(define (sub type depth1 depth2)
+  (vector-copy type depth1 depth2))
+(define (ref type depth)
+  (vector-ref type depth))
+(define (depth type)
+  (vector-length type))
+(define (has-tag? type tag)
+  (let/cc abort
+    (for ((e (in-vector type)))
+      (cond ((eq? e tag)
+             (abort #t))))
+    #f))
+
+;;aliases for compatibility
 (define content ;;retrieve contents
   tagged-object-content)
 (define tag ;;tag objects
   tagged-object)
 (define type ;;retrieve type tags
   tagged-object-type)
-
-;;resolve the hierarchies of types
-(define (super type)
-  (if (null? (cddr type)) (cadr type) (cdr type)))
-(define (current type)
-  (if (tag? type) type (car type)))
+(define (current type) ;;get the first tag
+  (ref type 0))
+(define (super type) ;;get the super type
+  (sub type 1 (vector-length type)))
+(define (root? type) ;;find out whether or not this type is a root type
+  (= 1 (depth type)))
 
 (define (apply-generic op obj . rest) ;;call the function with the object's content and other by-position arguments
   (apply (index (type obj) op) (content obj) rest))
 (define (coerce obj (dest #f)) ;;coerce the content of the object
   (let loop ((types (type obj)) (content (content obj)))
-    (cond ((and (tag? types) (not dest)) ((get-coerce types) content))
+    (cond ((and (root? types) (not dest)) ((get-coerce types) content))
           ((eq? dest (current types)) (tag types content))
           (else (loop (super types) ((get-coerce types) content))))))
 ;;--------------------------
@@ -88,22 +130,22 @@
 
   (test-case
       "data"
-    (install 'pict pict? values)
-    (install '(title pict) string? titlet (cons 'length string-length))
+    (install (make-type 'pict) pict? values)
+    (install (make-type 'title 'pict) string? titlet (cons 'length string-length))
 
-    (check-equal? string-length (index '(title pict) 'length))
-    (check-equal? titlet (get-coerce '(title pict)))
-    (check-equal? string? (get-contract '(title pict)))
+    (check-equal? string-length (index (make-type 'title 'pict) 'length))
+    (check-equal? titlet (get-coerce (make-type 'title 'pict)))
+    (check-equal? string? (get-contract (make-type 'title 'pict)))
 
-    (assign '(title pict) (cons 'length (compose add1 string-length)))
-    (check-eq? (apply-generic 'length (tag '(title pict) "abc")) 4)
+    (assign (make-type 'title 'pict) (cons 'length (compose add1 string-length)))
+    (check-eq? (apply-generic 'length (tag (make-type 'title 'pict) "abc")) 4)
 
     (define (process s) (titlet s)) 
-    (define (process1 s) (coerce (tag '(title pict) s)))
-    (define (process2 s) (coerce (tag 'pict (titlet s))))
-    (define (process3 s) (coerce (coerce (tag '(title pict) s) 'pict)))
+    (define (process1 s) (coerce (tag (make-type 'title 'pict) s)))
+    (define (process2 s) (coerce (tag (make-type 'pict) (titlet s))))
+    (define (process3 s) (coerce (coerce (tag (make-type 'title 'pict) s) 'pict)))
     
-    (compare (time-repeat 10000 (process "Hello, World!"))
+    (compare (time-repeat 100000 (process "Hello, World!"))
              process
              process1
              process2
