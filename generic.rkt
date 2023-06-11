@@ -7,8 +7,8 @@
                                (-> hierarchies boolean?))
                        
                        (install
-                        (opt/c (->i ((type (and/c (not/c has-key?)
-                                                  hierarchies
+                        (opt/c (->i ((type (and/c hierarchies
+                                                  (not/c has-key?)
                                                   (or/c root?
                                                         (and/c
                                                          (lambda (l) (> (depth l) 1))
@@ -20,7 +20,7 @@
                                     any)))
                        #; (assign (-> has-key? (cons/c tag? any/c) ... any)) ;;suppress users from mutating methods after they are installed due to security question marks
                        (rename assign attach
-                               (opt/c (->i ((type has-key?))
+                               (opt/c (->i ((type (and/c hierarchies has-key?)))
                                            #:rest (rest (type) (listof (cons/c (and/c tag? (not/c (lambda (op) (index type op #f)))) any/c)))
                                            any)))
                        (apply-generic
@@ -35,20 +35,19 @@
                                     any)))
                        (coerce (opt/c (->i ((object (dest) (and/c tagged
                                                                   (or/c (not/c dest)
-                                                                        (lambda (o) (has-tag? (type o) dest))))))
-                                           ((dest (or/c #f tag?)))
+                                                                        (lambda (o) (has-tag? (type o) dest)))))
+                                            (dest (or/c #f tag?)))
                                            any)))
-                       (rename coerce ->pict ;;it's the same as `coerce` within the unsafe submodule
-                               (-> tagged any))
+                       (->pict (-> tagged any))
                        
-                       (tagged-object? (-> any/c boolean?))
-                       (tag (opt/c (->i ((type has-key?) (content (type) (get-contract type))) (result tagged))))
+                       #; (tagged-object? (-> any/c boolean?)) ;;it always returns false because of the abstract contract
+                       (tag? (-> any/c boolean?))
+                       (tag (opt/c (->i ((type (and/c hierarchies has-key?)) (content (type) (get-contract type))) (result tagged))))
                        (type (-> tagged hierarchies))
 
                        ;;primitives for handling types
                        ;;they never check if types are installed
-                       (make-type (-> tag? ... hierarchies))
-                       (prefix (-> (or/c tag? hierarchies) hierarchies hierarchies))
+                       (make-type (-> (or/c tag? hierarchies) ... hierarchies))
                        (ref (opt/c (->i ((type (dep) (and/c hierarchies (lambda (l) (> (depth l) dep)))) (dep exact-nonnegative-integer?)) (result tag?))))
                        (sub (opt/c (->i ((type hierarchies)
                                          (start exact-nonnegative-integer?)
@@ -85,10 +84,11 @@
   (vector-ref (hash-ref table type) 1))
 
 ;;resolve the hierarchies of types
-(define (prefix type base)
-  (vector-append (if (tag? type) (vector type) type) base))
 (define (make-type . types)
-  (list->vector types))
+  (let loop ((types types) (result '#()))
+    (cond ((null? types) result)
+          ((vector? (car types)) (loop (cdr types) (vector-append result (car types))))
+          (else (loop (cdr types) (vector-append result (vector (car types))))))))
 (define (sub type depth1 depth2)
   (vector-copy type depth1 depth2))
 (define (ref type depth)
@@ -118,11 +118,14 @@
 
 (define (apply-generic op obj . rest) ;;call the function with the object's content and other by-position arguments
   (apply (index (type obj) op) (content obj) rest))
-(define (coerce obj (dest #f)) ;;coerce the content of the object
+(define (coerce obj dest) ;;coerce the content of the object
   (let loop ((types (type obj)) (content (content obj)))
     (cond ((and (root? types) (not dest)) ((get-coerce types) content))
           ((eq? dest (current types)) (tag types content))
           (else (loop (super types) ((get-coerce types) content))))))
+
+(define (->pict obj)
+  (coerce obj #f))
 ;;--------------------------
 
 (module+ test
