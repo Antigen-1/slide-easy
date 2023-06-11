@@ -144,9 +144,9 @@
     (check-eq? (apply-generic 'length (tag (make-type 'title 'pict) "abc")) 4)
 
     (define (process s) (titlet s)) 
-    (define (process1 s) (coerce (tag (make-type 'title 'pict) s)))
-    (define (process2 s) (coerce (tag (make-type 'pict) (titlet s))))
-    (define (process3 s) (coerce (coerce (tag (make-type 'title 'pict) s) 'pict)))
+    (define (process1 s) (coerce (tag (make-type 'title 'pict) s) #f))
+    (define (process2 s) (coerce (tag (make-type 'pict) (titlet s)) #f))
+    (define (process3 s) (coerce (coerce (tag (make-type 'title 'pict) s) 'pict) #f))
     
     (compare (time-repeat 100000 (process "Hello, World!"))
              process
