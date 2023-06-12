@@ -16,7 +16,7 @@
   (define strlst (make-list (random 10 100) (make-string (random 100 200) #\a)))
   
   (test-case
-      "with contract"
+      "contracts"
     (check-true (= (string-length (string-append* strlst)) (len (tag type0 (string-append* strlst))) (len (coerce (tag type1 strlst) 'text))))
 
     (define (process s) (text (string-append* s)))
