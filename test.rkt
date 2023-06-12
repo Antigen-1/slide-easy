@@ -13,17 +13,16 @@
   (define (len o)
     (apply-generic 'len o))
 
-  (define str (make-string (random 100 200) #\a))
-  (define strlst (make-list (random 10 100) str))
+  (define strlst (make-list (random 10 100) (make-string (random 100 200) #\a)))
   
   (test-case
       "with contract"
-    (check-eq? (string-length str) (len (tag type0 str)))
-    (check-eq? (string-list-length strlst) (len (tag type1 strlst)))
+    (check-true (= (string-length (string-append* strlst)) (len (tag type0 (string-append* strlst))) (len (coerce (tag type1 strlst) 'text))))
 
     (define (process s) (text (string-append* s)))
     (define (process1 s) (->pict (tag type0 (string-append* s))))
     (define (process2 s) (->pict (tag type1 s)))
+    (define (process3 s) (->pict (coerce (tag type1 strlst) 'text)))
     
     (compare (time-repeat 1000 (process strlst))
-             process process1 process2)))
+             process process1 process2 process3)))
