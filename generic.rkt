@@ -54,6 +54,7 @@
                                         (result hierarchies))))
                        (depth (-> hierarchies exact-nonnegative-integer?))
                        (has-tag? (-> hierarchies tag? boolean?))
+                       (rename equal? type=? (-> hierarchies hierarchies boolean?))
 
                        ;;these operations are not primitives, but they still never check if types are installed 
                        (current (-> (and/c hierarchies (lambda (l) (exact-positive-integer? (depth l)))) tag?))
