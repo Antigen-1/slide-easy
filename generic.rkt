@@ -54,12 +54,13 @@
                                         (result hierarchies))))
                        (depth (-> hierarchies exact-nonnegative-integer?))
                        (has-tag? (-> hierarchies tag? boolean?))
-                       (rename equal? type=? (-> hierarchies hierarchies boolean?))
+                       (type=? (-> hierarchies hierarchies boolean?))
 
                        ;;these operations are not primitives, but they still never check if types are installed 
                        (current (-> (and/c hierarchies (lambda (l) (exact-positive-integer? (depth l)))) tag?))
                        (super (-> (and/c hierarchies (not/c root?)) hierarchies))
-                       (root? (-> hierarchies boolean?)))
+                       (root? (-> hierarchies boolean?))
+                       (has-prefix? (-> hierarchies hierarchies boolean?)))
          )
 
 ;;--------------------------
@@ -100,6 +101,7 @@
       (cond ((eq? e tag)
              (abort #t))))
     #f))
+(define (type=? t1 t2) (equal? t1 t2))
 
 ;;aliases for compatibility
 (define content ;;retrieve contents
@@ -114,6 +116,10 @@
   (sub type 1 (vector-length type)))
 (define (root? type) ;;find out whether or not this type is a root type
   (= 1 (depth type)))
+(define (has-prefix? type prefix) ;;find out whether or not this type has this prefix
+  (define l (depth prefix))
+  (define d (depth type))
+  (type=? prefix (sub type (- d l) d)))
 
 (define (apply-generic op obj . rest) ;;call the function with the object's content and other by-position arguments
   (apply (index (type obj) op) (content obj) rest))
