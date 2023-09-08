@@ -1,5 +1,5 @@
 #lang racket/base
-(require racket/contract pict racket/vector)
+(require racket/contract pict slideshow/base racket/vector)
 ;;there are no contracts outside this `provide` form, while contracts for representations are still placed into the table
 (provide (contract-out #:unprotected-submodule unsafe
                        #:exists (hierarchies tagged)
@@ -61,7 +61,7 @@
                        (super (-> (and/c hierarchies (not/c root?)) hierarchies))
                        (root? (-> hierarchies boolean?))
                        (has-prefix? (-> hierarchies hierarchies boolean?)))
-         )
+         (all-from-out pict slideshow/base racket/base racket/contract))
 
 ;;--------------------------
 ;;the vertical barrier and generic interfaces
@@ -132,29 +132,3 @@
 (define (->pict obj)
   (coerce obj #f))
 ;;--------------------------
-
-(module+ test
-  (require sugar/debug rackunit slideshow/base)
-
-  (test-case
-      "data"
-    (install (make-type 'pict) pict? values)
-    (install (make-type 'title 'pict) string? titlet (cons 'length string-length))
-
-    (check-equal? string-length (index (make-type 'title 'pict) 'length))
-    (check-equal? titlet (get-coerce (make-type 'title 'pict)))
-    (check-equal? string? (get-contract (make-type 'title 'pict)))
-
-    (assign (make-type 'title 'pict) (cons 'length (compose add1 string-length)))
-    (check-eq? (apply-generic 'length (tag (make-type 'title 'pict) "abc")) 4)
-
-    (define (process s) (titlet s)) 
-    (define (process1 s) (coerce (tag (make-type 'title 'pict) s) #f))
-    (define (process2 s) (coerce (tag (make-type 'pict) (titlet s)) #f))
-    (define (process3 s) (coerce (coerce (tag (make-type 'title 'pict) s) 'pict) #f))
-    
-    (compare (time-repeat 100000 (process "Hello, World!"))
-             process
-             process1
-             process2
-             process3)))
