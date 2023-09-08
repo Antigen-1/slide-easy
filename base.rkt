@@ -1,7 +1,6 @@
 #lang racket/base
-(require "config.rkt" racket/function slideshow/base "generic.rkt"
-         (for-syntax racket/base))
-(provide (all-from-out racket/base) config (rename-out (#%slide-app #%app) (#%app #%ret)))
+(require "config.rkt" racket/function "generic.rkt" (for-syntax racket/base))
+(provide config (rename-out (#%slide-app #%app) (#%app #%ret)))
 
 (define-syntax (config stx)
   (syntax-case stx ()
