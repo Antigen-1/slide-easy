@@ -22,8 +22,5 @@
 
 ;; Code here
 
-(module test racket/base
-  (require "tests/test.rkt"))
-
 (require "base.rkt")
 (provide (all-from-out racket/base) #%app #%ret config)
